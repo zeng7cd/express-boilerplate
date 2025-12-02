@@ -1,0 +1,79 @@
+{
+  "name": "express-typescript-boilerplate",
+  "version": "0.0.1",
+  "description": "An Express boilerplate backend",
+  "author": "zeng",
+  "repository": "express-typescript-2025",
+  "main": "index.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc && tsup",
+    "start:dev": "cross-env NODE_ENV=development node --import=tsx --watch src/index.ts",
+    "start:prod": "node dist/index.js",
+    "format": "biome format --write",
+    "check": "biome check --write",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "cors": "2.8.5",
+    "cron": "^4.3.5",
+    "cron-parser": "^5.4.0",
+    "dayjs": "^1.11.19",
+    "dotenv": "17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-zod": "^0.8.3",
+    "express": "5.1.0",
+    "express-rate-limit": "8.2.1",
+    "helmet": "8.1.0",
+    "http-status-codes": "2.3.0",
+    "nanoid": "^5.1.6",
+    "pg": "^8.16.3",
+    "pino": "10.1.0",
+    "ioredis": "^5.4.1",
+    "pino-http": "11.0.0",
+    "radash": "^12.1.1",
+    "rxjs": "^7.8.2",
+    "ua-parser-js": "^2.0.6",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.5",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.6",
+    "@types/supertest": "6.0.3",
+    "@types/ioredis": "^5.0.0",
+    "@types/ua-parser-js": "^0.7.39",
+    "@vitest/coverage-v8": "4.0.14",
+    "cross-env": "^10.1.0",
+    "drizzle-kit": "^0.31.7",
+    "globals": "^16.5.0",
+    "pino-pretty": "13.1.2",
+    "supertest": "7.1.4",
+    "tsup": "8.5.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "4.0.14"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "outDir": "dist",
+    "format": [
+      "esm",
+      "cjs"
+    ],
+    "target": "es2020",
+    "sourcemap": true,
+    "clean": true,
+    "dts": true,
+    "splitting": false,
+    "skipNodeModulesBundle": true
+  },
+  "packageManager": "pnpm@10.12.1"
+}
