@@ -40,7 +40,7 @@ BaseLogger (抽象)
 ```typescript
 // 使用工厂函数替代继承
 const createLogger = (name: string, options: LoggerOptions) => {
-  return pino({...config, name});
+  return pino({ ...config, name });
 };
 ```
 
@@ -53,7 +53,7 @@ const createLogger = (name: string, options: LoggerOptions) => {
 export class AppLogger extends BaseLogger {
   constructor(config?: Partial<LoggerConfig>) {
     const mergedConfig = { ...loggerConfig, ...config };
-    super("app", mergedConfig);
+    super('app', mergedConfig);
   }
   // 重复代码...
 }
@@ -63,10 +63,11 @@ export class AppLogger extends BaseLogger {
 
 ```typescript
 // loggerFactory.ts
-export const createAppLogger = () => createLogger('app', {
-  filePrefix: 'application',
-  pretty: isDevelopment
-});
+export const createAppLogger = () =>
+  createLogger('app', {
+    filePrefix: 'application',
+    pretty: isDevelopment,
+  });
 ```
 
 ### 方案三：简化配置管理
@@ -83,7 +84,7 @@ export const createAppLogger = () => createLogger('app', {
 // 单一配置源
 const getLoggerConfig = (overrides?: Partial<LoggerConfig>) => ({
   ...defaultConfig,
-  ...overrides
+  ...overrides,
 });
 ```
 
@@ -112,12 +113,12 @@ const getLogger = (() => {
 
 ## 📊 精简效果预估
 
-| 指标 | 当前 | 优化后 | 减少比例 |
-|------|------|--------|----------|
-| 文件数量 | 7个 | 4个 | 43% |
-| 代码行数 | ~400行 | ~150行 | 62% |
-| 类数量 | 5个 | 0个 | 100% |
-| 导出API | 15个 | 8个 | 47% |
+| 指标     | 当前   | 优化后 | 减少比例 |
+| -------- | ------ | ------ | -------- |
+| 文件数量 | 7个    | 4个    | 43%      |
+| 代码行数 | ~400行 | ~150行 | 62%      |
+| 类数量   | 5个    | 0个    | 100%     |
+| 导出API  | 15个   | 8个    | 47%      |
 
 ## 🛠️ 具体优化实现
 

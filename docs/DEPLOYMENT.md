@@ -98,7 +98,7 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
       - NODE_ENV=production
       - DB_HOST=postgres
@@ -110,7 +110,7 @@ services:
       - redis
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health-check"]
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8080/health-check']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -126,7 +126,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -135,7 +135,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -179,14 +179,14 @@ metadata:
   name: app-config
   namespace: express-app
 data:
-  NODE_ENV: "production"
-  API_PREFIX: "api"
-  LOGGER_LEVEL: "info"
+  NODE_ENV: 'production'
+  API_PREFIX: 'api'
+  LOGGER_LEVEL: 'info'
 ```
 
 `k8s/secret.yaml`:
 
-```yaml
+````yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -250,7 +250,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-```
+````
 
 `k8s/service.yaml`:
 
@@ -264,8 +264,8 @@ spec:
   selector:
     app: express-app
   ports:
-  - port: 80
-    targetPort: 8080
+    - port: 80
+      targetPort: 8080
   type: ClusterIP
 ```
 
@@ -354,3 +354,4 @@ kubectl logs -f pod/express-app-xxx -n express-app
 
 # 应用内部日志文件
 docker exec -it express-app cat /app/logs/app.log
+```

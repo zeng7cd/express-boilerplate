@@ -4,23 +4,23 @@
  */
 
 // 重新导出pino类型供外部使用
-export type { Logger as PinoLogger } from "pino";
+export type { Logger as PinoLogger } from 'pino';
 // 导出配置函数
 export {
-	createMultiTransport,
-	createPinoConfig,
-	getBasePinoConfig,
-	getConsoleTransport,
-	getFileTransport,
-	getTransportConfig,
-} from "./config";
+  createMultiTransport,
+  createPinoConfig,
+  getBasePinoConfig,
+  getConsoleTransport,
+  getFileTransport,
+  getTransportConfig,
+} from './config';
 // 导出工厂函数
 export {
-	createAccessPinoLogger,
-	createAppPinoLogger,
-	createCustomPinoLogger,
-	createModulePinoLogger,
-	getAccessPinoLogger,
-	getAppPinoLogger,
-	resetPinoLoggers,
-} from "./factory";
+  createAccessPinoLogger,
+  createAppPinoLogger,
+  createCustomPinoLogger,
+  createModulePinoLogger,
+  getAccessPinoLogger,
+  getAppPinoLogger,
+  resetPinoLoggers,
+} from './factory';

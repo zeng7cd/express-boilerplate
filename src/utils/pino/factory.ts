@@ -1,5 +1,5 @@
-import pino from "pino";
-import { createPinoConfig } from "./config";
+import pino from 'pino';
+import { createPinoConfig } from './config';
 
 /**
  * Pino日志器工厂函数
@@ -11,7 +11,7 @@ import { createPinoConfig } from "./config";
  * 替代原有的 createAppLogger()
  */
 export function createAppPinoLogger(): pino.Logger {
-  const config = createPinoConfig("app", "app.log");
+  const config = createPinoConfig('app', 'app.log');
   return pino(config);
 }
 
@@ -20,7 +20,7 @@ export function createAppPinoLogger(): pino.Logger {
  * 替代原有的 getAccessLogger()
  */
 export function createAccessPinoLogger(): pino.Logger {
-  const config = createPinoConfig("access", "access.log");
+  const config = createPinoConfig('access', 'access.log');
   return pino(config);
 }
 
@@ -28,31 +28,35 @@ export function createAccessPinoLogger(): pino.Logger {
  * 创建模块日志器
  * 替代原有的 createModuleLogger()
  */
-export function createModulePinoLogger(moduleName: string, context?: Record<string, any>): pino.Logger {
+export function createModulePinoLogger(moduleName: string, context?: Record<string, unknown>): pino.Logger {
   const config = createPinoConfig(`module-${moduleName}`, `${moduleName}.log`);
   const logger = pino(config);
-  
+
   if (context) {
     return logger.child({
       module: moduleName,
       ...context,
     });
   }
-  
+
   return logger.child({ module: moduleName });
 }
 
 /**
  * 创建自定义日志器
  */
-export function createCustomPinoLogger(name: string, logFileName?: string, context?: Record<string, any>): pino.Logger {
+export function createCustomPinoLogger(
+  name: string,
+  logFileName?: string,
+  context?: Record<string, unknown>,
+): pino.Logger {
   const config = createPinoConfig(name, logFileName);
   const logger = pino(config);
-  
+
   if (context) {
     return logger.child(context);
   }
-  
+
   return logger;
 }
 

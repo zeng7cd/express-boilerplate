@@ -1,15 +1,15 @@
-import { afterAll, beforeAll } from "vitest";
-import { testDatabaseConnectionWithRetry } from "../src/database";
+import { afterAll, beforeAll } from 'vitest';
+import { testDatabaseConnectionWithRetry } from '../src/database';
 
 beforeAll(async () => {
-	// 测试环境设置
-	process.env.NODE_ENV = "test";
-	process.env.LOG_TO_FILE = "false";
+  // 测试环境设置
+  process.env.NODE_ENV = 'test';
+  process.env.LOG_TO_FILE = 'false';
 
-	// 确保数据库连接
-	await testDatabaseConnectionWithRetry();
+  // 确保数据库连接
+  await testDatabaseConnectionWithRetry();
 });
 
 afterAll(async () => {
-	// 清理测试环境
+  // 清理测试环境
 });

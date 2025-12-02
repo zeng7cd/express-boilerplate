@@ -1,6 +1,5 @@
-import pino from "pino";
-import pinoPretty from "pino-pretty";
-import { env } from "@/config/envConfig";
+import pino from 'pino';
+import { env } from '@/config/envConfig';
 
 /**
  * Pino日志配置模块
@@ -39,13 +38,13 @@ export function getConsoleTransport(): pino.TransportSingleOptions | null {
   }
 
   return {
-    target: "pino-pretty",
+    target: 'pino-pretty',
     options: {
       colorize: true,
-      translateTime: "yyyy-mm-dd HH:MM:ss.l",
-      ignore: "pid,hostname",
+      translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+      ignore: 'pid,hostname',
       singleLine: false,
-      messageFormat: "[{level}] {msg}",
+      messageFormat: '[{level}] {msg}',
     },
   };
 }
@@ -53,9 +52,9 @@ export function getConsoleTransport(): pino.TransportSingleOptions | null {
 /**
  * 获取文件输出的pino传输配置
  */
-export function getFileTransport(filename = "app.log"): pino.TransportSingleOptions {
+export function getFileTransport(filename = 'app.log'): pino.TransportSingleOptions {
   return {
-    target: "pino/file",
+    target: 'pino/file',
     options: {
       destination: `logs/${filename}`,
       mkdir: true,
@@ -75,7 +74,9 @@ export function createMultiTransport(transports: pino.TransportSingleOptions[]):
 /**
  * 根据环境配置创建传输配置
  */
-export function getTransportConfig(logFileName?: string): pino.TransportSingleOptions | pino.TransportMultiOptions | undefined {
+export function getTransportConfig(
+  logFileName?: string,
+): pino.TransportSingleOptions | pino.TransportMultiOptions | undefined {
   const transports: pino.TransportSingleOptions[] = [];
 
   // 开发环境：控制台输出

@@ -1,9 +1,9 @@
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import type { z } from "zod";
-import { detectors } from "@/database/schema";
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import type { z } from 'zod';
+import { detectors } from '@/database/schema';
 
-const SelectDetectorsSchema = createSelectSchema(detectors);
-const InsertDetectorsSchema = createInsertSchema(detectors);
+export const SelectDetectorsSchema = createSelectSchema(detectors);
+export const InsertDetectorsSchema = createInsertSchema(detectors);
 
 // export const GetDetectorByNumSchema = z.object({
 // 	query: z.object({

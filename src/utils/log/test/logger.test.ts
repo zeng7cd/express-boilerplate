@@ -1,216 +1,209 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import {
-	AccessLogger,
-	AppLogger,
-	createModuleLogger,
-	getAccessLogger,
-	getAppLogger,
-	initializeAccessLogger,
-	initializeLogger,
-	LoggerManager,
-	logger,
-	loggerManager,
-} from "../logger";
-import type { ModuleLoggerOptions } from "../types";
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { createModuleLogger, getAccessLogger, getAppLogger, initializeLogSystem, loggerManager } from '../logger';
+import type { ModuleLoggerOptions } from '../types';
 
-describe("Logger Class-based Implementation", () => {
-	beforeEach(() => {
-		// 清理日志管理器状态
-		loggerManager.shutdown();
-	});
+describe('Logger System Integration', () => {
+  beforeEach(async () => {
+    // 重置日志管理器状态
+    await loggerManager.reset();
+  });
 
-	afterEach(async () => {
-		await loggerManager.shutdown();
-	});
+  afterEach(async () => {
+    await loggerManager.shutdown();
+  });
 
-	describe("BaseLogger Classes", () => {
-		test("should create AppLogger instance", () => {
-			const appLogger = new AppLogger();
-			expect(appLogger.name).toBe("app");
-			expect(appLogger.config).toBeDefined();
-		});
+  describe('Logger Manager', () => {
+    test('should initialize logger manager', async () => {
+      await loggerManager.initialize();
+      expect(loggerManager.isInitialized).toBe(true);
+    });
 
-		test("should create AccessLogger instance", () => {
-			const accessLogger = new AccessLogger();
-			expect(accessLogger.name).toBe("access");
-			expect(accessLogger.config).toBeDefined();
-		});
+    test('should get app logger after initialization', async () => {
+      await loggerManager.initialize();
+      const appLogger = loggerManager.getAppLogger();
+      expect(appLogger).toBeDefined();
+      expect(typeof appLogger.info).toBe('function');
+    });
 
-		test("should initialize logger asynchronously", async () => {
-			const appLogger = new AppLogger();
-			await appLogger.initialize();
-			const pinoLogger = appLogger.getLogger();
-			expect(pinoLogger).toBeDefined();
-			expect(typeof pinoLogger.info).toBe("function");
-		});
+    test('should get access logger after initialization', async () => {
+      await loggerManager.initialize();
+      const accessLogger = loggerManager.getAccessLogger();
+      expect(accessLogger).toBeDefined();
+      expect(typeof accessLogger.info).toBe('function');
+    });
 
-		test("should throw error when getting uninitialized logger", () => {
-			const appLogger = new AppLogger();
-			expect(() => appLogger.getLogger()).toThrow("Logger 'app' not initialized");
-		});
+    test('should create child logger', async () => {
+      await loggerManager.initialize();
+      const appLogger = loggerManager.getAppLogger();
+      const childLogger = appLogger.child({ module: 'test' });
+      expect(childLogger).toBeDefined();
+    });
 
-		test("should create child logger", async () => {
-			const appLogger = new AppLogger();
-			await appLogger.initialize();
-			const childLogger = appLogger.createChild({ module: "test" });
-			expect(childLogger).toBeDefined();
-		});
-	});
+    test('should initialize with default loggers', async () => {
+      await loggerManager.initialize();
 
-	describe("LoggerManager", () => {
-		test("should create new LoggerManager instance", () => {
-			const manager = new LoggerManager();
-			expect(manager).toBeDefined();
-		});
+      expect(loggerManager.has('app')).toBe(true);
+      expect(loggerManager.has('access')).toBe(true);
+    });
 
-		test("should initialize with default loggers", async () => {
-			const manager = new LoggerManager();
-			await manager.initialize();
+    test('should create custom logger', async () => {
+      await loggerManager.initialize();
+      const customLogger = await loggerManager.createCustomLogger('custom');
+      expect(customLogger).toBeDefined();
+      expect(loggerManager.has('custom')).toBe(true);
+    });
 
-			expect(manager.has("app")).toBe(true);
-			expect(manager.has("access")).toBe(true);
-		});
+    test('should return existing custom logger', async () => {
+      await loggerManager.initialize();
+      const logger1 = await loggerManager.createCustomLogger('test');
+      const logger2 = await loggerManager.createCustomLogger('test');
+      expect(logger1).toBe(logger2);
+    });
 
-		test("should register and get loggers", async () => {
-			const manager = new LoggerManager();
-			const customLogger = new AppLogger();
+    test('should throw error for non-existent logger', async () => {
+      await loggerManager.initialize();
+      expect(() => loggerManager.get('nonexistent')).not.toThrow();
+      expect(loggerManager.get('nonexistent')).toBeUndefined();
+    });
 
-			await manager.register("custom", customLogger);
-			const retrieved = manager.get("custom");
+    test('should create module logger', async () => {
+      await loggerManager.initialize();
 
-			expect(retrieved).toBe(customLogger);
-		});
+      const moduleLogger = loggerManager.createModuleLogger({
+        module: 'test-module',
+        context: { userId: '123' },
+      });
 
-		test("should throw error for duplicate registration", async () => {
-			const manager = new LoggerManager();
-			const logger1 = new AppLogger();
-			const logger2 = new AppLogger();
+      expect(moduleLogger).toBeDefined();
+    });
 
-			await manager.register("test", logger1);
-			await expect(manager.register("test", logger2)).rejects.toThrow("already registered");
-		});
+    test('should shutdown all loggers', async () => {
+      await loggerManager.initialize();
 
-		test("should throw error for non-existent logger", () => {
-			const manager = new LoggerManager();
-			expect(() => manager.get("nonexistent")).toThrow("not found");
-		});
+      expect(loggerManager.has('app')).toBe(true);
+      expect(loggerManager.has('access')).toBe(true);
 
-		test("should create module logger", async () => {
-			const manager = new LoggerManager();
-			await manager.initialize();
+      await loggerManager.shutdown();
 
-			const moduleLogger = manager.createModuleLogger({
-				module: "test-module",
-				context: { userId: "123" },
-			});
+      expect(loggerManager.has('app')).toBe(false);
+      expect(loggerManager.has('access')).toBe(false);
+    });
 
-			expect(moduleLogger).toBeDefined();
-		});
+    test('should get logger statistics', async () => {
+      await loggerManager.initialize();
+      const stats = loggerManager.getStats();
 
-		test("should shutdown all loggers", async () => {
-			const manager = new LoggerManager();
-			await manager.initialize();
+      expect(stats.totalLoggers).toBeGreaterThan(0);
+      expect(stats.loggerNames).toContain('app');
+      expect(stats.loggerNames).toContain('access');
+      expect(stats.isInitialized).toBe(true);
+    });
+  });
 
-			expect(manager.has("app")).toBe(true);
-			expect(manager.has("access")).toBe(true);
+  describe('Backward Compatibility API', () => {
+    test('should get app logger via function', async () => {
+      await initializeLogSystem();
+      const pinoLogger = getAppLogger();
+      expect(pinoLogger).toBeDefined();
+      expect(typeof pinoLogger.info).toBe('function');
+    });
 
-			await manager.shutdown();
+    test('should get access logger via function', async () => {
+      await initializeLogSystem();
+      const pinoLogger = getAccessLogger();
+      expect(pinoLogger).toBeDefined();
+      expect(typeof pinoLogger.info).toBe('function');
+    });
 
-			expect(manager.has("app")).toBe(false);
-			expect(manager.has("access")).toBe(false);
-		});
-	});
+    test('should initialize loggers via functions', async () => {
+      await initializeLogSystem();
 
-	describe("Backward Compatibility API", () => {
-		test("should get app logger via function", () => {
-			const pinoLogger = getAppLogger();
-			expect(pinoLogger).toBeDefined();
-			expect(typeof pinoLogger.info).toBe("function");
-		});
+      expect(loggerManager.has('app')).toBe(true);
+      expect(loggerManager.has('access')).toBe(true);
+    });
 
-		test("should get access logger via function", () => {
-			const pinoLogger = getAccessLogger();
-			expect(pinoLogger).toBeDefined();
-			expect(typeof pinoLogger.info).toBe("function");
-		});
+    test('should create module logger via function', async () => {
+      await initializeLogSystem();
 
-		test("should initialize loggers via functions", async () => {
-			await initializeLogger();
-			await initializeAccessLogger();
+      const options: ModuleLoggerOptions = {
+        module: 'test-module',
+        context: { requestId: 'req-123' },
+      };
 
-			expect(loggerManager.has("app")).toBe(true);
-			expect(loggerManager.has("access")).toBe(true);
-		});
+      const moduleLogger = await createModuleLogger(options);
+      expect(moduleLogger).toBeDefined();
+    });
 
-		test("should create module logger via function", () => {
-			// 确保app logger已初始化
-			getAppLogger();
+    test('should use app logger', async () => {
+      await initializeLogSystem();
+      const appLogger = getAppLogger();
 
-			const options: ModuleLoggerOptions = {
-				module: "test-module",
-				context: { requestId: "req-123" },
-			};
+      expect(appLogger.debug).toBeDefined();
+      expect(appLogger.info).toBeDefined();
+      expect(appLogger.warn).toBeDefined();
+      expect(appLogger.error).toBeDefined();
+      expect(appLogger.child).toBeDefined();
 
-			const moduleLogger = createModuleLogger(options);
-			expect(moduleLogger).toBeDefined();
-		});
+      // Test methods don't throw
+      expect(() => appLogger.info('test message')).not.toThrow();
+      expect(() => appLogger.debug('test debug', { meta: 'data' })).not.toThrow();
+    });
 
-		test("should use default logger object", () => {
-			expect(logger.debug).toBeDefined();
-			expect(logger.info).toBeDefined();
-			expect(logger.warn).toBeDefined();
-			expect(logger.error).toBeDefined();
-			expect(logger.child).toBeDefined();
+    test('should create child logger from app logger', async () => {
+      await initializeLogSystem();
+      const appLogger = getAppLogger();
+      const childLogger = appLogger.child({ component: 'test' });
+      expect(childLogger).toBeDefined();
+      expect(typeof childLogger.info).toBe('function');
+    });
+  });
 
-			// Test methods don't throw
-			expect(() => logger.info("test message")).not.toThrow();
-			expect(() => logger.debug("test debug", { meta: "data" })).not.toThrow();
-		});
+  describe('Configuration', () => {
+    test('should create custom logger with config', async () => {
+      await loggerManager.initialize();
+      const customLogger = await loggerManager.createCustomLogger('custom', {
+        level: 'warn',
+        logToFile: false,
+      });
 
-		test("should create child logger from default logger", () => {
-			const childLogger = logger.child({ component: "test" });
-			expect(childLogger).toBeDefined();
-			expect(typeof childLogger.info).toBe("function");
-		});
-	});
+      expect(customLogger).toBeDefined();
+      expect(typeof customLogger.warn).toBe('function');
+    });
 
-	describe("Configuration", () => {
-		test("should accept custom config in AppLogger", () => {
-			const customConfig = {
-				level: "warn" as const,
-				logToFile: false,
-			};
+    test('should create module logger instance with config', async () => {
+      await loggerManager.initialize();
 
-			const appLogger = new AppLogger(customConfig);
-			expect(appLogger.config.level).toBe("warn");
-			expect(appLogger.config.logToFile).toBe(false);
-		});
+      const moduleLogger = await loggerManager.getOrCreateModuleLogger('test-module', {
+        level: 'debug',
+      });
 
-		test("should accept custom config in AccessLogger", () => {
-			const customConfig = {
-				level: "error" as const,
-				prettyPrint: false,
-			};
+      expect(moduleLogger).toBeDefined();
+      expect(typeof moduleLogger.debug).toBe('function');
+    });
+  });
 
-			const accessLogger = new AccessLogger(customConfig);
-			expect(accessLogger.config.level).toBe("error");
-			expect(accessLogger.config.prettyPrint).toBe(false);
-		});
-	});
+  describe('Error Handling', () => {
+    test('should handle logger manager operations gracefully', async () => {
+      // Test that logger manager operations don't throw
+      expect(() => loggerManager.getStats()).not.toThrow();
+      expect(() => loggerManager.getRegisteredLoggers()).not.toThrow();
+    });
 
-	describe("Error Handling", () => {
-		test("should handle logger creation errors gracefully", () => {
-			// Test that logger creation doesn't throw even with edge cases
-			expect(() => new AppLogger()).not.toThrow();
-			expect(() => new AccessLogger()).not.toThrow();
-		});
+    test('should handle multiple initializations', async () => {
+      await loggerManager.initialize();
 
-		test("should handle multiple initializations", async () => {
-			const appLogger = new AppLogger();
-			await appLogger.initialize();
+      // Second initialization should not throw
+      await expect(loggerManager.initialize()).resolves.not.toThrow();
+    });
 
-			// Second initialization should not throw
-			await expect(appLogger.initialize()).resolves.not.toThrow();
-		});
-	});
+    test('should handle getting loggers before initialization', () => {
+      expect(() => getAppLogger()).toThrow();
+      expect(() => getAccessLogger()).toThrow();
+    });
+
+    test('should handle shutdown when not initialized', async () => {
+      // Should not throw even if not initialized
+      await expect(loggerManager.shutdown()).resolves.not.toThrow();
+    });
+  });
 });

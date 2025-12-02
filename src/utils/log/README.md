@@ -72,12 +72,12 @@ const prodConfig = ConfigPresets.production();
 // 全局配置覆写
 configManager.setGlobalOverrides({
   level: 'debug',
-  prettyPrint: true
+  prettyPrint: true,
 });
 
 // 特定日志器配置
 configManager.setLoggerOverrides('user-service', {
-  level: 'info'
+  level: 'info',
 });
 ```
 
@@ -95,7 +95,7 @@ appLogger.info('应用启动成功', { port: 3000 });
 // 创建模块日志器
 const userLogger = await createModuleLogger({
   module: 'user-service',
-  context: { version: '1.0.0' }
+  context: { version: '1.0.0' },
 });
 
 userLogger.info('用户服务初始化完成');
@@ -134,7 +134,7 @@ import { createAppLogger } from '@/utils/log';
 
 const logger = await createAppLogger({
   level: 'debug',
-  prettyPrint: true
+  prettyPrint: true,
 });
 
 // 支持多种调用方式
@@ -142,9 +142,9 @@ logger.info('服务器启动', { port: 3000 });
 logger.info({ port: 3000 }, '服务器启动');
 
 // 错误日志增强
-logger.error(new Error('数据库连接失败'), '连接错误', { 
+logger.error(new Error('数据库连接失败'), '连接错误', {
   database: 'users',
-  retryCount: 3 
+  retryCount: 3,
 });
 ```
 
@@ -156,25 +156,25 @@ import { createModuleLogger } from '@/utils/log';
 class UserService {
   private logger = await createModuleLogger({
     module: 'user-service',
-    context: { 
+    context: {
       service: 'UserService',
-      version: '2.0.0'
-    }
+      version: '2.0.0',
+    },
   });
 
   async createUser(userData: UserData) {
     this.logger.info('开始创建用户', { email: userData.email });
-    
+
     try {
       const user = await this.db.users.create(userData);
-      this.logger.info('用户创建成功', { 
+      this.logger.info('用户创建成功', {
         userId: user.id,
-        email: user.email 
+        email: user.email,
       });
       return user;
     } catch (error) {
-      this.logger.error(error, '用户创建失败', { 
-        email: userData.email 
+      this.logger.error(error, '用户创建失败', {
+        email: userData.email,
       });
       throw error;
     }
@@ -194,9 +194,9 @@ app.use(async (req, res, next) => {
   const requestLogger = baseLogger.child({
     requestId: req.id,
     userId: req.user?.id,
-    ip: req.ip
+    ip: req.ip,
   });
-  
+
   req.logger = requestLogger;
   next();
 });
@@ -204,7 +204,7 @@ app.use(async (req, res, next) => {
 // 在路由处理器中使用
 app.get('/users', async (req, res) => {
   req.logger.info('获取用户列表请求');
-  
+
   try {
     const users = await userService.getUsers();
     req.logger.info('用户列表获取成功', { count: users.length });
@@ -219,11 +219,7 @@ app.get('/users', async (req, res) => {
 ### 4. 高级配置和管理
 
 ```typescript
-import { 
-  loggerManager, 
-  configManager, 
-  ConfigPresets 
-} from '@/utils/log';
+import { loggerManager, configManager, ConfigPresets } from '@/utils/log';
 
 // 应用不同环境的预设配置
 if (process.env.NODE_ENV === 'production') {
@@ -240,8 +236,8 @@ const customLogger = await loggerManager.createCustomLogger('analytics', {
     directory: 'analytics-logs',
     filePrefix: 'analytics',
     maxSize: '50m',
-    maxFiles: 20
-  }
+    maxFiles: 20,
+  },
 });
 
 // 获取系统统计
