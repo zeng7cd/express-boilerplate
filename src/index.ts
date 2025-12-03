@@ -1,10 +1,10 @@
-import { env } from '@/config/envConfig';
+import { env } from '@/core/config/env';
 import { createApp } from '@/server';
-import { createAppPinoLogger } from '@/utils/pino';
+import { getLogger } from '@/core/logger';
 
 async function startServer() {
   // Initialize logger system
-  const logger = createAppPinoLogger();
+  const logger = getLogger();
 
   const app = await createApp();
 
@@ -23,7 +23,7 @@ async function startServer() {
 
     server.close((error) => {
       if (error) {
-        logger.error({ err: error }, 'Error during server shutdown');
+        logger.error('Error during server shutdown', error);
         process.exit(1);
       }
       logger.info('Server closed gracefully');

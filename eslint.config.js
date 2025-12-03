@@ -6,7 +6,7 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default [
   {
-    ignores: ['node_modules', 'dist', 'coverage'],
+    ignores: ['node_modules', 'dist', 'coverage', 'src/generated/**'],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -37,6 +37,7 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-namespace': 'off',
     },
   },
 ];

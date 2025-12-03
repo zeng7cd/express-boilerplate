@@ -1,12 +1,12 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
-import { env } from '@/config/envConfig';
-import setupRoutes from '@/config/routesConfig';
-import { testDatabaseConnection } from '@/database';
-import errorHandler from '@/middleware/errorHandler';
-import rateLimiter from '@/middleware/rateLimiter';
-import requestLogger from '@/middleware/requestLogger';
+import { env } from '@/core/config/env';
+import setupRoutes from '@/core/config/routes';
+import { testDatabaseConnection } from '@/core/database';
+import errorHandler from '@/shared/middleware/middleware/errorHandler';
+import rateLimiter from '@/shared/middleware/middleware/rateLimiter';
+import requestLogger from '@/shared/middleware/middleware/requestLogger';
 
 // Import API routes
 import '@/api/routes';

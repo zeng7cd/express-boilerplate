@@ -10,9 +10,9 @@ describe('Health Check API', () => {
     app = await createApp();
   });
 
-  describe('GET /health-check', () => {
+  describe('GET /api/health-check', () => {
     it('should return healthy status', async () => {
-      const response = await request(app).get('/health-check').expect(200);
+      const response = await request(app).get('/api/health-check').expect(200);
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Service is healthy');
@@ -22,9 +22,9 @@ describe('Health Check API', () => {
     });
   });
 
-  describe('GET /health-check/detailed', () => {
+  describe('GET /api/health-check/detailed', () => {
     it('should return detailed health information', async () => {
-      const response = await request(app).get('/health-check/detailed');
+      const response = await request(app).get('/api/health-check/detailed');
 
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('database');
@@ -35,18 +35,18 @@ describe('Health Check API', () => {
     });
   });
 
-  describe('GET /health-check/ready', () => {
+  describe('GET /api/health-check/ready', () => {
     it('should return readiness status', async () => {
-      const response = await request(app).get('/health-check/ready');
+      const response = await request(app).get('/api/health-check/ready');
 
       expect(response.body).toHaveProperty('status');
       expect(['ready', 'not ready']).toContain(response.body.status);
     });
   });
 
-  describe('GET /health-check/live', () => {
+  describe('GET /api/health-check/live', () => {
     it('should return liveness status', async () => {
-      const response = await request(app).get('/health-check/live').expect(200);
+      const response = await request(app).get('/api/health-check/live').expect(200);
 
       expect(response.body.status).toBe('alive');
     });
