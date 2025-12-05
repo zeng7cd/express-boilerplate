@@ -1,8 +1,8 @@
 import express, { type Request, type Response, type Router } from 'express';
 import { cacheService } from '@/core/cache/redis';
-import { ServiceResponse } from '@/common/serviceResponse';
+import { ServiceResponse } from '@/shared/utils/serviceResponse';
 import { checkDatabaseHealth } from '@/core/database';
-import { metricsCollector } from '@/shared/middleware/middleware/metrics';
+import { metricsCollector } from '@/shared/middleware/metrics';
 import { registerRoute } from '@/shared/utils/routeRegistry';
 
 export const healthCheckRouter: Router = express.Router();

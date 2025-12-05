@@ -4,9 +4,9 @@ import helmet from 'helmet';
 import { env } from '@/core/config/env';
 import setupRoutes from '@/core/config/routes';
 import { testDatabaseConnection } from '@/core/database';
-import errorHandler from '@/shared/middleware/middleware/errorHandler';
-import rateLimiter from '@/shared/middleware/middleware/rateLimiter';
-import requestLogger from '@/shared/middleware/middleware/requestLogger';
+import errorHandler from '@/shared/middleware/errorHandler';
+import rateLimiter from '@/shared/middleware/rateLimiter';
+import requestLogger from '@/shared/middleware/requestLogger';
 
 // Import API routes
 import '@/api/routes';

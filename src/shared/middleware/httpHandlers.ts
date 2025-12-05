@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import type * as z from 'zod';
-import { ServiceResponse } from '@/common/serviceResponse';
+import { ServiceResponse } from '@/shared/utils/serviceResponse';
 
 /**
  * Middleware to validate request parameters, query, and body using Zod schema.

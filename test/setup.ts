@@ -1,5 +1,5 @@
 import { afterAll, beforeAll } from 'vitest';
-import { testDatabaseConnectionWithRetry } from '../src/database';
+import { testDatabaseConnection } from '../src/core/database';
 
 beforeAll(async () => {
   // 测试环境设置
@@ -7,7 +7,7 @@ beforeAll(async () => {
   process.env.LOG_TO_FILE = 'false';
 
   // 确保数据库连接
-  await testDatabaseConnectionWithRetry();
+  await testDatabaseConnection();
 });
 
 afterAll(async () => {

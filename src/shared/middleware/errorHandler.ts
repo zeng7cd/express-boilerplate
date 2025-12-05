@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { ServiceResponse } from '@/common/serviceResponse';
+import { ServiceResponse } from '@/shared/utils/serviceResponse';
 import { env } from '@/core/config/env';
 import { getAppPinoLogger } from '@/core/logger/pino';
 

@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 import { StatusCodes } from 'http-status-codes';
-import { ServiceResponse } from '@/common/serviceResponse';
+import { ServiceResponse } from '@/shared/utils/serviceResponse';
 
 export const validate = (schema: z.ZodTypeAny) => (req: Request, res: Response, next: NextFunction) => {
   try {
