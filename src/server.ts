@@ -45,7 +45,7 @@ async function createApp(): Promise<Express> {
 
   // 404 Handler
   app.use((_req, res) => {
-    res.status(404).json({ 
+    res.status(404).json({
       success: false,
       code: 'NOT_FOUND',
       message: 'Resource not found',

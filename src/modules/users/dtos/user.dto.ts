@@ -18,7 +18,6 @@ export interface UserDto {
 }
 
 export class UserDtoMapper {
-
   /**
    * 从数据库实体创建 DTO
    */
@@ -41,7 +40,7 @@ export class UserDtoMapper {
    * 批量转换
    */
   static fromEntities(users: User[]): UserDto[] {
-    return users.map(user => UserDtoMapper.fromEntity(user));
+    return users.map((user) => UserDtoMapper.fromEntity(user));
   }
 
   /**
@@ -65,10 +64,10 @@ export interface UserWithRolesDto extends UserDto {
 export class UserWithRolesDtoMapper {
   static fromEntityWithRoles(user: User & { userRoles: any[] }): UserWithRolesDto {
     const baseDto = UserDtoMapper.fromEntity(user);
-    
+
     const roles = user.userRoles.map((ur: any) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur: any) =>
-      ur.role.rolePermissions?.map((rp: any) => rp.permission.name) || []
+    const permissions = user.userRoles.flatMap(
+      (ur: any) => ur.role.rolePermissions?.map((rp: any) => rp.permission.name) || [],
     );
 
     return {

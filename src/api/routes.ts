@@ -5,6 +5,7 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import authRoutes from '@/modules/auth/routes';
 import { healthCheckRouter } from '@/modules/monitoring/healthCheck/healthCheck.routes';
+import swaggerRoutes from '@/modules/monitoring/swagger/swagger.routes';
 
 const router: ExpressRouter = Router();
 
@@ -18,11 +19,16 @@ router.use('/auth', authRoutes);
  * 系统路由（不添加 /api 前缀）
  * 直接在 setupRoutes 中注册
  */
-export const systemRoutes = {
+export const systemRoutes: Record<string, { path: string; router: ExpressRouter; description: string }> = {
   healthCheck: {
     path: '/health-check',
     router: healthCheckRouter,
     description: '系统健康检查',
+  },
+  swagger: {
+    path: '/api-docs',
+    router: swaggerRoutes,
+    description: 'API 文档',
   },
 };
 

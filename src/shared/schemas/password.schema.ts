@@ -13,10 +13,7 @@ export const passwordSchema = z
   .regex(/[0-9]/, '密码必须包含至少一个数字')
   .regex(/[^A-Za-z0-9]/, '密码必须包含至少一个特殊字符');
 
-export const emailSchema = z
-  .string()
-  .email('无效的邮箱格式')
-  .max(255, '邮箱地址过长');
+export const emailSchema = z.string().email('无效的邮箱格式').max(255, '邮箱地址过长');
 
 export const usernameSchema = z
   .string()

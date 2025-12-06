@@ -17,9 +17,9 @@ declare global {
 export const requestIdMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // 优先使用客户端提供的 request ID，否则生成新的
   req.id = (req.headers['x-request-id'] as string) || nanoid();
-  
+
   // 在响应头中返回 request ID
   res.setHeader('X-Request-ID', req.id);
-  
+
   next();
 };

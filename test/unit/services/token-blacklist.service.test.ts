@@ -32,31 +32,25 @@ describe('TokenBlacklistService', () => {
     it('should add token to blacklist', async () => {
       const token = jwtService.generateAccessToken(mockUser);
       const decoded = jwtService.decodeToken(token);
-      
+
       vi.mocked(cacheService.set).mockResolvedValue(true);
 
       await tokenBlacklistService.addToBlacklist(token);
 
-      expect(cacheService.set).toHaveBeenCalledWith(
-        expect.stringContaining('blacklist:'),
-        true,
-        expect.any(Number)
-      );
+      expect(cacheService.set).toHaveBeenCalledWith(expect.stringContaining('blacklist:'), true, expect.any(Number));
     });
 
     it('should handle token without jti', async () => {
       const invalidToken = 'invalid-token';
-      
-      await expect(
-        tokenBlacklistService.addToBlacklist(invalidToken)
-      ).rejects.toThrow();
+
+      await expect(tokenBlacklistService.addToBlacklist(invalidToken)).rejects.toThrow();
     });
   });
 
   describe('isBlacklisted', () => {
     it('should return true for blacklisted token', async () => {
       const token = jwtService.generateAccessToken(mockUser);
-      
+
       vi.mocked(cacheService.get).mockResolvedValue(true);
 
       const result = await tokenBlacklistService.isBlacklisted(token);
@@ -66,7 +60,7 @@ describe('TokenBlacklistService', () => {
 
     it('should return false for non-blacklisted token', async () => {
       const token = jwtService.generateAccessToken(mockUser);
-      
+
       vi.mocked(cacheService.get).mockResolvedValue(null);
 
       const result = await tokenBlacklistService.isBlacklisted(token);
@@ -81,11 +75,7 @@ describe('TokenBlacklistService', () => {
 
       await tokenBlacklistService.blacklistUserTokens(mockUserId, 3600);
 
-      expect(cacheService.set).toHaveBeenCalledWith(
-        `blacklist:user:${mockUserId}`,
-        true,
-        3600
-      );
+      expect(cacheService.set).toHaveBeenCalledWith(`blacklist:user:${mockUserId}`, true, 3600);
     });
   });
 

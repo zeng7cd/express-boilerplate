@@ -219,7 +219,7 @@ export class AuthService {
   async logout(token: string): Promise<void> {
     // 将 token 加入黑名单
     await tokenBlacklistService.addToBlacklist(token);
-    
+
     // 删除会话记录
     await prisma.session.deleteMany({
       where: { token },
@@ -233,7 +233,7 @@ export class AuthService {
     // 将用户的所有 token 加入黑名单
     const maxExpiry = jwtService.getRefreshExpiresInSeconds();
     await tokenBlacklistService.blacklistUserTokens(userId, maxExpiry);
-    
+
     // 删除所有会话记录
     await prisma.session.deleteMany({
       where: { userId },

@@ -25,34 +25,46 @@ const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
 
   // 处理自定义应用异常
   if (err instanceof AppException) {
-    const response = ServiceResponse.failure(err.message, {
-      code: err.code,
-      details: env.isProduction ? undefined : err.details,
-    }, err.statusCode);
-    
+    const response = ServiceResponse.failure(
+      err.message,
+      {
+        code: err.code,
+        details: env.isProduction ? undefined : err.details,
+      },
+      err.statusCode,
+    );
+
     return res.status(err.statusCode).json(response);
   }
 
   // 处理 Zod 验证错误
   if (err instanceof ZodError) {
-    const response = ServiceResponse.failure('Validation failed', {
-      code: 'VALIDATION_ERROR',
-      details: err.issues.map((issue) => ({
-        path: issue.path.join('.'),
-        message: issue.message,
-      })),
-    }, StatusCodes.BAD_REQUEST);
-    
+    const response = ServiceResponse.failure(
+      'Validation failed',
+      {
+        code: 'VALIDATION_ERROR',
+        details: err.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      },
+      StatusCodes.BAD_REQUEST,
+    );
+
     return res.status(StatusCodes.BAD_REQUEST).json(response);
   }
 
   // 处理 Prisma 错误
   if (err.code?.startsWith('P')) {
-    const response = ServiceResponse.failure('Database error', {
-      code: 'DATABASE_ERROR',
-      details: env.isProduction ? undefined : err.message,
-    }, StatusCodes.INTERNAL_SERVER_ERROR);
-    
+    const response = ServiceResponse.failure(
+      'Database error',
+      {
+        code: 'DATABASE_ERROR',
+        details: env.isProduction ? undefined : err.message,
+      },
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
+
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(response);
   }
 

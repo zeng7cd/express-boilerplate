@@ -17,7 +17,7 @@ describe('JWTService', () => {
   describe('generateAccessToken', () => {
     it('should generate a valid access token', () => {
       const token = jwtService.generateAccessToken(mockUser);
-      
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
       expect(token.split('.')).toHaveLength(3); // JWT 格式: header.payload.signature
@@ -26,7 +26,7 @@ describe('JWTService', () => {
     it('should include user information in token', () => {
       const token = jwtService.generateAccessToken(mockUser);
       const decoded = jwtService.verifyAccessToken(token);
-      
+
       expect(decoded.sub).toBe(mockUser.id);
       expect(decoded.email).toBe(mockUser.email);
       expect(decoded.username).toBe(mockUser.username);
@@ -37,7 +37,7 @@ describe('JWTService', () => {
     it('should include jti claim', () => {
       const token = jwtService.generateAccessToken(mockUser);
       const decoded = jwtService.verifyAccessToken(token);
-      
+
       expect(decoded.jti).toBeDefined();
       expect(typeof decoded.jti).toBe('string');
     });
@@ -46,7 +46,7 @@ describe('JWTService', () => {
   describe('generateRefreshToken', () => {
     it('should generate a valid refresh token', () => {
       const token = jwtService.generateRefreshToken(mockUser.id);
-      
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
       expect(token.split('.')).toHaveLength(3);
@@ -55,7 +55,7 @@ describe('JWTService', () => {
     it('should verify refresh token correctly', () => {
       const token = jwtService.generateRefreshToken(mockUser.id);
       const decoded = jwtService.verifyRefreshToken(token);
-      
+
       expect(decoded.sub).toBe(mockUser.id);
       expect(decoded.jti).toBeDefined();
     });
@@ -65,7 +65,7 @@ describe('JWTService', () => {
     it('should verify valid token', () => {
       const token = jwtService.generateAccessToken(mockUser);
       const decoded = jwtService.verifyAccessToken(token);
-      
+
       expect(decoded).toBeDefined();
       expect(decoded.sub).toBe(mockUser.id);
     });
@@ -87,7 +87,7 @@ describe('JWTService', () => {
     it('should decode token without verification', () => {
       const token = jwtService.generateAccessToken(mockUser);
       const decoded = jwtService.decodeToken(token);
-      
+
       expect(decoded).toBeDefined();
       expect(decoded?.sub).toBe(mockUser.id);
     });
@@ -101,7 +101,7 @@ describe('JWTService', () => {
   describe('getExpiresInSeconds', () => {
     it('should return expiration time in seconds', () => {
       const expiresIn = jwtService.getExpiresInSeconds();
-      
+
       expect(expiresIn).toBeGreaterThan(0);
       expect(typeof expiresIn).toBe('number');
     });

@@ -23,7 +23,7 @@ export class TokenBlacklistService {
 
       // 计算 TTL（使用 token 的剩余有效期）
       const ttl = expiresIn || this.calculateTTL(decoded.exp);
-      
+
       if (ttl > 0) {
         await cacheService.set(`${this.prefix}${decoded.jti}`, true, ttl);
         this.logger.info({ jti: decoded.jti }, 'Token added to blacklist');

@@ -28,13 +28,11 @@ const envSchema = z.object({
   JWT_SECRET: z
     .string()
     .min(64, 'JWT_SECRET must be at least 64 characters for security')
-    .refine((val) => val !== 'your-super-secret-jwt-key-min-64-chars-long-for-security-please-change-this-in-production', 
-      'JWT_SECRET must be changed from default value in production'),
-  JWT_REFRESH_SECRET: z
-    .string()
-    .min(64, 'JWT_REFRESH_SECRET must be at least 64 characters')
-    .optional()
-    .default(''),
+    .refine(
+      (val) => val !== 'your-super-secret-jwt-key-min-64-chars-long-for-security-please-change-this-in-production',
+      'JWT_SECRET must be changed from default value in production',
+    ),
+  JWT_REFRESH_SECRET: z.string().min(64, 'JWT_REFRESH_SECRET must be at least 64 characters').optional().default(''),
   JWT_EXPIRES_IN: z.string().default('1h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 

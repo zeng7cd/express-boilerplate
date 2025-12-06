@@ -53,7 +53,12 @@ export class AuditService {
   /**
    * 记录认证相关操作
    */
-  async logAuth(action: 'LOGIN' | 'LOGOUT' | 'REGISTER' | 'PASSWORD_CHANGE', userId: string, req: Request, details?: any): Promise<void> {
+  async logAuth(
+    action: 'LOGIN' | 'LOGOUT' | 'REGISTER' | 'PASSWORD_CHANGE',
+    userId: string,
+    req: Request,
+    details?: any,
+  ): Promise<void> {
     await this.log({
       userId,
       action,
@@ -66,7 +71,13 @@ export class AuditService {
   /**
    * 记录权限变更
    */
-  async logPermissionChange(userId: string, targetUserId: string, action: string, req: Request, details?: any): Promise<void> {
+  async logPermissionChange(
+    userId: string,
+    targetUserId: string,
+    action: string,
+    req: Request,
+    details?: any,
+  ): Promise<void> {
     await this.log({
       userId,
       action,
@@ -80,7 +91,13 @@ export class AuditService {
   /**
    * 记录数据访问
    */
-  async logDataAccess(userId: string, resource: string, resourceId: string, action: 'READ' | 'CREATE' | 'UPDATE' | 'DELETE', req: Request): Promise<void> {
+  async logDataAccess(
+    userId: string,
+    resource: string,
+    resourceId: string,
+    action: 'READ' | 'CREATE' | 'UPDATE' | 'DELETE',
+    req: Request,
+  ): Promise<void> {
     await this.log({
       userId,
       action,

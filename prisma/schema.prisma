@@ -11,44 +11,50 @@ datasource db {
 
 // 用户表
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  username    String   @unique
-  password    String   // bcrypt 加密
+  id          String    @id @default(cuid())
+  email       String    @unique
+  username    String    @unique
+  password    String    // bcrypt 加密
   firstName   String?
   lastName    String?
   avatar      String?
-  isActive    Boolean  @default(true)
-  isVerified  Boolean  @default(false)
+  isActive    Boolean   @default(true)
+  isVerified  Boolean   @default(false)
   lastLoginAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  version     Int       @default(1) // 乐观锁版本号
+  deletedAt   DateTime? // 软删除时间戳
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // 关系
-  userRoles   UserRole[]
-  sessions    Session[]
-  auditLogs   AuditLog[]
+  userRoles UserRole[]
+  sessions  Session[]
+  auditLogs AuditLog[]
 
   @@index([email])
   @@index([username])
   @@index([isActive])
+  @@index([deletedAt])
   @@map("users")
 }
 
 // 角色表
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   displayName String
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean   @default(true)
+  version     Int       @default(1) // 乐观锁版本号
+  deletedAt   DateTime? // 软删除时间戳
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // 关系
   userRoles       UserRole[]
   rolePermissions RolePermission[]
 
+  @@index([deletedAt])
   @@map("roles")
 }
 
@@ -109,6 +115,7 @@ model Session {
   @@index([token])
   @@index([refreshToken])
   @@index([expiresAt])
+  @@index([userId, expiresAt]) // 复合索引优化查询
   @@map("sessions")
 }
 
@@ -130,5 +137,7 @@ model AuditLog {
   @@index([action])
   @@index([resource])
   @@index([createdAt])
+  @@index([userId, createdAt]) // 复合索引优化查询
+  @@index([resource, action, createdAt]) // 复合索引优化查询
   @@map("audit_logs")
 }
