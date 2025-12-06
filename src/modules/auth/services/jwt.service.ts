@@ -14,11 +14,13 @@ interface DecodedRefreshToken {
 
 export class JWTService {
   private readonly secret: string;
+  private readonly refreshSecret: string;
   private readonly expiresIn: string;
   private readonly refreshExpiresIn: string;
 
   constructor() {
     this.secret = env.JWT_SECRET;
+    this.refreshSecret = env.JWT_REFRESH_SECRET || env.JWT_SECRET;
     this.expiresIn = env.JWT_EXPIRES_IN;
     this.refreshExpiresIn = env.JWT_REFRESH_EXPIRES_IN;
   }
@@ -51,7 +53,7 @@ export class JWTService {
       jti: nanoid(),
     };
 
-    return jwt.sign(payload, this.secret, {
+    return jwt.sign(payload, this.refreshSecret, {
       expiresIn: this.getRefreshExpiresInSeconds(),
     });
   }
@@ -73,7 +75,7 @@ export class JWTService {
    */
   verifyRefreshToken(token: string): { sub: string; jti: string } {
     try {
-      const decoded = jwt.verify(token, this.secret) as DecodedRefreshToken;
+      const decoded = jwt.verify(token, this.refreshSecret) as DecodedRefreshToken;
       if (decoded.type !== 'refresh') {
         throw new Error('Invalid token type');
       }

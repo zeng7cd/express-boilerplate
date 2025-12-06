@@ -1,9 +1,12 @@
+/**
+ * 健康检查路由
+ * 提供系统健康状态检查接口
+ */
 import express, { type Request, type Response, type Router } from 'express';
 import { cacheService } from '@/core/cache/redis';
 import { ServiceResponse } from '@/shared/utils/serviceResponse';
 import { checkDatabaseHealth } from '@/core/database';
 import { metricsCollector } from '@/shared/middleware/metrics';
-import { registerRoute } from '@/shared/utils/routeRegistry';
 
 export const healthCheckRouter: Router = express.Router();
 
@@ -70,6 +73,5 @@ healthCheckRouter.get('/live', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'alive' });
 });
 
-// 自动注册健康检查路由
-// 注意：使用独立路径，不受API前缀影响，便于负载均衡器和监控系统访问
-registerRoute('/health-check', healthCheckRouter, '系统健康检查');
+// 健康检查路由会在 src/api/routes.ts 中作为系统路由注册
+// 不需要在这里自动注册

@@ -3,6 +3,7 @@
  */
 import type { Request, Response, NextFunction } from 'express';
 import { jwtService } from '@/modules/auth/services/jwt.service';
+import { tokenBlacklistService } from '@/core/services/token-blacklist.service';
 import type { JWTPayload } from '@/shared/types/auth';
 
 // 扩展Request接口
@@ -25,17 +26,43 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     if (!token) {
       res.status(401).json({
         success: false,
+        code: 'TOKEN_REQUIRED',
         message: 'Access token required',
       });
       return;
     }
 
+    // 验证 token
     const decoded = jwtService.verifyAccessToken(token);
+
+    // 检查 token 是否在黑名单中
+    const isBlacklisted = await tokenBlacklistService.isBlacklisted(token);
+    if (isBlacklisted) {
+      res.status(401).json({
+        success: false,
+        code: 'TOKEN_REVOKED',
+        message: 'Token has been revoked',
+      });
+      return;
+    }
+
+    // 检查用户的所有 token 是否被撤销
+    const isUserBlacklisted = await tokenBlacklistService.isUserBlacklisted(decoded.sub);
+    if (isUserBlacklisted) {
+      res.status(401).json({
+        success: false,
+        code: 'USER_TOKENS_REVOKED',
+        message: 'All user tokens have been revoked',
+      });
+      return;
+    }
+
     req.user = decoded;
     next();
   } catch (_error) {
     res.status(401).json({
       success: false,
+      code: 'INVALID_TOKEN',
       message: 'Invalid or expired token',
     });
   }

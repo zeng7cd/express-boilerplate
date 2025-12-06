@@ -1,10 +1,29 @@
-import '@/modules/monitoring/healthCheck/healthCheck.routes';
-import authRoutes from '@/modules/auth/routes';
+/**
+ * API 路由聚合
+ * 统一管理所有业务模块路由
+ */
 import { Router, type Router as ExpressRouter } from 'express';
+import authRoutes from '@/modules/auth/routes';
+import { healthCheckRouter } from '@/modules/monitoring/healthCheck/healthCheck.routes';
 
 const router: ExpressRouter = Router();
 
-// 认证路由
+/**
+ * 业务模块路由
+ * 这些路由会自动添加 /api 前缀
+ */
 router.use('/auth', authRoutes);
+
+/**
+ * 系统路由（不添加 /api 前缀）
+ * 直接在 setupRoutes 中注册
+ */
+export const systemRoutes = {
+  healthCheck: {
+    path: '/health-check',
+    router: healthCheckRouter,
+    description: '系统健康检查',
+  },
+};
 
 export default router;

@@ -9,6 +9,10 @@ import { env } from '../config/env';
 // 创建PostgreSQL连接池
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX, // 最大连接数
+  min: env.DB_POOL_MIN, // 最小连接数
+  idleTimeoutMillis: env.DB_IDLE_TIMEOUT, // 空闲连接超时
+  connectionTimeoutMillis: env.DB_CONNECTION_TIMEOUT, // 连接超时
 });
 
 // 创建Prisma适配器

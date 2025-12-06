@@ -30,6 +30,32 @@ dev-debug.log
 # Dependency directories
 node_modules/
 # Environment variables
+.env
+.env.*
+!.env.example
 .vscode
 # OS specific
+.DS_Store
 .roo
+
+# Test coverage
+coverage/
+*.lcov
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~

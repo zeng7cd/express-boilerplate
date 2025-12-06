@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/core/database';
 import { jwtService } from './jwt.service';
 import { env } from '@/core/config/env';
+import { tokenBlacklistService } from '@/core/services/token-blacklist.service';
+import { DuplicateException, InvalidCredentialsException } from '@/shared/exceptions';
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthenticatedUser } from '@/shared/types/auth';
 
 export class AuthService {
@@ -20,7 +22,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('User with this email or username already exists');
+      throw new DuplicateException('User with this email or username already exists');
     }
 
     // 加密密码
@@ -84,13 +86,13 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsException('Invalid email or password');
     }
 
     // 验证密码
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsException('Invalid email or password');
     }
 
     // 提取角色和权限
@@ -175,7 +177,7 @@ export class AuthService {
     });
 
     if (!session || !session.user.isActive) {
-      throw new Error('Invalid refresh token');
+      throw new InvalidCredentialsException('Invalid refresh token');
     }
 
     // 提取角色和权限
@@ -215,8 +217,26 @@ export class AuthService {
    * 用户登出
    */
   async logout(token: string): Promise<void> {
+    // 将 token 加入黑名单
+    await tokenBlacklistService.addToBlacklist(token);
+    
+    // 删除会话记录
     await prisma.session.deleteMany({
       where: { token },
+    });
+  }
+
+  /**
+   * 登出所有设备（撤销用户的所有 token）
+   */
+  async logoutAllDevices(userId: string): Promise<void> {
+    // 将用户的所有 token 加入黑名单
+    const maxExpiry = jwtService.getRefreshExpiresInSeconds();
+    await tokenBlacklistService.blacklistUserTokens(userId, maxExpiry);
+    
+    // 删除所有会话记录
+    await prisma.session.deleteMany({
+      where: { userId },
     });
   }
 

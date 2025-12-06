@@ -25,7 +25,16 @@ const envSchema = z.object({
   DB_DATABASE: z.string().min(1),
 
   // JWT配置
-  JWT_SECRET: z.string().min(32),
+  JWT_SECRET: z
+    .string()
+    .min(64, 'JWT_SECRET must be at least 64 characters for security')
+    .refine((val) => val !== 'your-super-secret-jwt-key-min-64-chars-long-for-security-please-change-this-in-production', 
+      'JWT_SECRET must be changed from default value in production'),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(64, 'JWT_REFRESH_SECRET must be at least 64 characters')
+    .optional()
+    .default(''),
   JWT_EXPIRES_IN: z.string().default('1h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
@@ -56,6 +65,26 @@ const envSchema = z.object({
   // 监控配置
   METRICS_ENABLED: z.coerce.boolean().default(true),
   HEALTH_CHECK_ENABLED: z.coerce.boolean().default(true),
+
+  // 安全配置
+  API_KEY: z.string().optional(),
+  ENABLE_CSRF_PROTECTION: z.coerce.boolean().default(false),
+  ALLOWED_IPS: z.string().optional(),
+
+  // Sentry 错误追踪
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+
+  // 功能开关
+  FEATURE_REGISTRATION_ENABLED: z.coerce.boolean().default(true),
+  FEATURE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),
+  FEATURE_TWO_FACTOR_AUTH: z.coerce.boolean().default(false),
+
+  // 数据库连接池配置
+  DB_POOL_MIN: z.coerce.number().int().positive().default(5),
+  DB_POOL_MAX: z.coerce.number().int().positive().default(20),
+  DB_CONNECTION_TIMEOUT: z.coerce.number().int().positive().default(2000),
+  DB_IDLE_TIMEOUT: z.coerce.number().int().positive().default(30000),
 });
 
 type EnvType = z.infer<typeof envSchema>;
