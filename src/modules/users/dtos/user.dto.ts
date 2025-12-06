@@ -2,7 +2,7 @@
  * 用户数据传输对象
  * 用于控制返回给客户端的用户信息，避免暴露敏感数据
  */
-import type { User } from '@/generated/prisma/client';
+import type { User } from '@/core/database';
 
 export interface UserDto {
   id: string;

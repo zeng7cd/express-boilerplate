@@ -14,15 +14,8 @@ const envSchema = z.object({
   COMMON_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(1000),
   COMMON_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(1000),
 
-  // Prisma 数据库连接
+  // 数据库连接
   DATABASE_URL: z.string().url(),
-
-  // 数据库配置
-  DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().positive(),
-  DB_USERNAME: z.string().min(1),
-  DB_PASSWORD: z.string().min(1),
-  DB_DATABASE: z.string().min(1),
 
   // JWT配置
   JWT_SECRET: z

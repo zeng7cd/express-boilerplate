@@ -3,7 +3,7 @@
  * 记录系统中的关键操作
  */
 import type { Request } from 'express';
-import { prisma } from '@/core/database';
+import { db, auditLogs } from '@/core/database';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
 export interface AuditLogParams {
@@ -23,16 +23,14 @@ export class AuditService {
    */
   async log(params: AuditLogParams): Promise<void> {
     try {
-      await prisma.auditLog.create({
-        data: {
-          userId: params.userId,
-          action: params.action,
-          resource: params.resource,
-          resourceId: params.resourceId,
-          details: params.details || {},
-          ipAddress: params.req.ip,
-          userAgent: params.req.headers['user-agent'],
-        },
+      await db.insert(auditLogs).values({
+        userId: params.userId,
+        action: params.action,
+        resource: params.resource,
+        resourceId: params.resourceId,
+        details: params.details || {},
+        ipAddress: params.req.ip,
+        userAgent: params.req.headers['user-agent'],
       });
 
       this.logger.info(

@@ -25,18 +25,16 @@ dist-ssr
 *.sln
 *.sw?
 
-# Added by Task Master AI
-dev-debug.log
 # Dependency directories
 node_modules/
+
 # Environment variables
 .env
 .env.*
 !.env.example
-.vscode
+
 # OS specific
 .DS_Store
-.roo
 
 # Test coverage
 coverage/
@@ -49,12 +47,14 @@ build/
 # Logs
 logs/
 *.log
+dev-debug.log
 
 # Temporary files
 tmp/
 temp/
 
 # IDE
+.vscode
 .idea/
 *.swp
 *.swo

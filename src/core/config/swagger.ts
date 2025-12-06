@@ -10,7 +10,7 @@ const swaggerOptions: swaggerJsdoc.Options = {
     info: {
       title: 'Express TypeScript Boilerplate API',
       version: '1.0.0',
-      description: '基于 Express + TypeScript + Prisma 的后端 API 文档',
+      description: '基于 Express + TypeScript + Drizzle ORM 的后端 API 文档',
       contact: {
         name: 'API Support',
         email: 'support@example.com',

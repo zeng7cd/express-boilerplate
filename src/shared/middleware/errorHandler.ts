@@ -54,8 +54,8 @@ const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return res.status(StatusCodes.BAD_REQUEST).json(response);
   }
 
-  // 处理 Prisma 错误
-  if (err.code?.startsWith('P')) {
+  // 处理数据库错误
+  if (err.code?.startsWith('P') || err.code === '23505') {
     const response = ServiceResponse.failure(
       'Database error',
       {

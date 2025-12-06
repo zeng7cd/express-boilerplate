@@ -2,8 +2,8 @@
  * 用户服务
  */
 import * as bcrypt from 'bcryptjs';
-import { prisma } from '../../../core/database';
-import type { Prisma } from '../../../generated/prisma/client';
+import { db, users, roles, userRoles, rolePermissions, permissions } from '@/core/database';
+import { eq, or, and, ilike, desc, count } from 'drizzle-orm';
 import { env } from '../../../core/config/env';
 import type {
   CreateUserRequest,
@@ -20,10 +20,8 @@ export class UserService {
    */
   async createUser(data: CreateUserRequest): Promise<UserResponse> {
     // 检查用户是否已存在
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: data.email }, { username: data.username }],
-      },
+    const existingUser = await db.query.users.findFirst({
+      where: or(eq(users.email, data.email), eq(users.username, data.username)),
     });
 
     if (existingUser) {
@@ -34,21 +32,80 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
 
     // 创建用户
-    const user = await prisma.user.create({
-      data: {
+    const [user] = await db
+      .insert(users)
+      .values({
         email: data.email,
         username: data.username,
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-      },
-      include: {
+      })
+      .returning();
+
+    // 分配角色
+    if (data.roleIds && data.roleIds.length > 0) {
+      await this.assignRoles(user.id, data.roleIds);
+    } else {
+      // 分配默认角色
+      const defaultRole = await db.query.roles.findFirst({
+        where: eq(roles.name, 'user'),
+      });
+
+      if (defaultRole) {
+        await db.insert(userRoles).values({
+          userId: user.id,
+          roleId: defaultRole.id,
+        });
+      }
+    }
+
+    // 重新查询用户以获取完整信息
+    const createdUser = await this.getUserById(user.id);
+    return createdUser!;
+  }
+
+  /**
+   * 获取用户列表
+   */
+  async getUsers(query: UserListQuery): Promise<UserListResponse> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const offset = (page - 1) * limit;
+
+    // 构建查询条件
+    const conditions = [];
+
+    if (query.search) {
+      conditions.push(
+        or(
+          ilike(users.email, `%${query.search}%`),
+          ilike(users.username, `%${query.search}%`),
+          ilike(users.firstName, `%${query.search}%`),
+          ilike(users.lastName, `%${query.search}%`)
+        )
+      );
+    }
+
+    if (query.isActive !== undefined) {
+      conditions.push(eq(users.isActive, query.isActive));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // 获取用户列表
+    const usersList = await db.query.users.findMany({
+      where: whereClause,
+      limit,
+      offset,
+      orderBy: desc(users.createdAt),
+      with: {
         userRoles: {
-          include: {
+          with: {
             role: {
-              include: {
+              with: {
                 rolePermissions: {
-                  include: {
+                  with: {
                     permission: true,
                   },
                 },
@@ -59,110 +116,14 @@ export class UserService {
       },
     });
 
-    // 分配角色
-    if (data.roleIds && data.roleIds.length > 0) {
-      await this.assignRoles(user.id, data.roleIds);
-    } else {
-      // 分配默认角色
-      const defaultRole = await prisma.role.findUnique({
-        where: { name: 'user' },
-      });
-
-      if (defaultRole) {
-        await prisma.userRole.create({
-          data: {
-            userId: user.id,
-            roleId: defaultRole.id,
-          },
-        });
-      }
-    }
-
-    return this.formatUserResponse(user);
-  }
-
-  /**
-   * 获取用户列表
-   */
-  async getUsers(query: UserListQuery): Promise<UserListResponse> {
-    const page = query.page || 1;
-    const limit = query.limit || 10;
-    const skip = (page - 1) * limit;
-
-    // 构建查询条件
-    const where: Prisma.UserWhereInput = {};
-
-    if (query.search) {
-      where.OR = [
-        { email: { contains: query.search, mode: 'insensitive' } },
-        { username: { contains: query.search, mode: 'insensitive' } },
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (query.isActive !== undefined) {
-      where.isActive = query.isActive;
-    }
-
-    if (query.role) {
-      where.userRoles = {
-        some: {
-          role: {
-            name: query.role,
-          },
-        },
-      };
-    }
-
-    // 获取用户列表和总数
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                include: {
-                  rolePermissions: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.user.count({ where }),
-    ]);
+    // 获取总数
+    const [{ value: total }] = await db
+      .select({ value: count() })
+      .from(users)
+      .where(whereClause);
 
     return {
-      users: users.map((user) =>
-        this.formatUserResponse(
-          user as Prisma.UserGetPayload<{
-            include: {
-              userRoles: {
-                include: {
-                  role: {
-                    include: {
-                      rolePermissions: {
-                        include: {
-                          permission: true;
-                        };
-                      };
-                    };
-                  };
-                };
-              };
-            };
-          }>,
-        ),
-      ),
+      users: usersList.map((user) => this.formatUserResponse(user)),
       pagination: {
         page,
         limit,
@@ -176,15 +137,15 @@ export class UserService {
    * 根据ID获取用户
    */
   async getUserById(id: string): Promise<UserResponse | null> {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, id),
+      with: {
         userRoles: {
-          include: {
+          with: {
             role: {
-              include: {
+              with: {
                 rolePermissions: {
-                  include: {
+                  with: {
                     permission: true,
                   },
                 },
@@ -202,62 +163,49 @@ export class UserService {
    * 更新用户
    */
   async updateUser(id: string, data: UpdateUserRequest): Promise<UserResponse> {
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await db.query.users.findFirst({ where: eq(users.id, id) });
     if (!user) {
       throw new Error('User not found');
     }
 
     // 更新用户基本信息
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
+    await db
+      .update(users)
+      .set({
         firstName: data.firstName,
         lastName: data.lastName,
         avatar: data.avatar,
         isActive: data.isActive,
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
 
     // 更新角色
     if (data.roleIds) {
       await this.assignRoles(id, data.roleIds);
     }
 
-    return this.formatUserResponse(updatedUser);
+    const updatedUser = await this.getUserById(id);
+    return updatedUser!;
   }
 
   /**
    * 删除用户
    */
   async deleteUser(id: string): Promise<void> {
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await db.query.users.findFirst({ where: eq(users.id, id) });
     if (!user) {
       throw new Error('User not found');
     }
 
-    await prisma.user.delete({ where: { id } });
+    await db.delete(users).where(eq(users.id, id));
   }
 
   /**
    * 修改密码
    */
   async changePassword(id: string, data: ChangePasswordRequest): Promise<void> {
-    const user = await prisma.user.findUnique({ where: { id } });
+    const user = await db.query.users.findFirst({ where: eq(users.id, id) });
     if (!user) {
       throw new Error('User not found');
     }
@@ -272,10 +220,7 @@ export class UserService {
     const hashedNewPassword = await bcrypt.hash(data.newPassword, env.BCRYPT_ROUNDS);
 
     // 更新密码
-    await prisma.user.update({
-      where: { id },
-      data: { password: hashedNewPassword },
-    });
+    await db.update(users).set({ password: hashedNewPassword }).where(eq(users.id, id));
   }
 
   /**
@@ -283,45 +228,26 @@ export class UserService {
    */
   private async assignRoles(userId: string, roleIds: string[]): Promise<void> {
     // 删除现有角色
-    await prisma.userRole.deleteMany({
-      where: { userId },
-    });
+    await db.delete(userRoles).where(eq(userRoles.userId, userId));
 
     // 分配新角色
     if (roleIds.length > 0) {
-      await prisma.userRole.createMany({
-        data: roleIds.map((roleId) => ({
+      await db.insert(userRoles).values(
+        roleIds.map((roleId) => ({
           userId,
           roleId,
-        })),
-      });
+        }))
+      );
     }
   }
 
   /**
    * 格式化用户响应
    */
-  private formatUserResponse(
-    user: Prisma.UserGetPayload<{
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true;
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    }>,
-  ): UserResponse {
-    const roles = user.userRoles?.map((ur) => ur.role.name) || [];
-    const permissions = user.userRoles?.flatMap((ur) => ur.role.rolePermissions.map((rp) => rp.permission.name)) || [];
+  private formatUserResponse(user: any): UserResponse {
+    const userRolesList = user.userRoles?.map((ur: any) => ur.role.name) || [];
+    const userPermissions =
+      user.userRoles?.flatMap((ur: any) => ur.role.rolePermissions.map((rp: any) => rp.permission.name)) || [];
 
     return {
       id: user.id,
@@ -332,8 +258,8 @@ export class UserService {
       avatar: user.avatar ?? undefined,
       isActive: user.isActive,
       isVerified: user.isVerified,
-      roles,
-      permissions,
+      roles: userRolesList,
+      permissions: userPermissions,
       lastLoginAt: user.lastLoginAt?.toISOString(),
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),

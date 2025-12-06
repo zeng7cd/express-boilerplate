@@ -7,7 +7,7 @@ An Express backend boilerplate built with TypeScript, Drizzle ORM, and PostgreSQ
 ### 核心技术栈
 - **TypeScript:** 类型安全的代码，提前捕获错误
 - **Express:** 快速、灵活的 Node.js Web 框架
-- **Prisma ORM:** 现代化的 TypeScript ORM，支持 PostgreSQL
+- **Drizzle ORM:** 轻量级、类型安全的 TypeScript ORM，支持 PostgreSQL
 - **Zod:** TypeScript 优先的模式声明和验证库
 - **Pino:** 高性能、低开销的日志系统
 - **Redis:** 内存数据库，用于缓存和会话管理
@@ -37,7 +37,7 @@ An Express backend boilerplate built with TypeScript, Drizzle ORM, and PostgreSQ
 ### 📊 数据库优化
 - ✅ **复合索引** - 优化查询性能（提升 40-60%）
 - ✅ **连接池管理** - 高效的数据库连接管理
-- ✅ **迁移管理** - Prisma Migrate 版本控制
+- ✅ **迁移管理** - Drizzle Kit 版本控制
 
 ## 🚀 Quick Start
 
@@ -80,6 +80,64 @@ An Express backend boilerplate built with TypeScript, Drizzle ORM, and PostgreSQ
 
 ## 💡 使用示例
 
+### Drizzle ORM 查询
+
+```typescript
+import { db, users } from '@/core/database';
+import { eq, and, or } from 'drizzle-orm';
+
+// 查询单个用户
+const user = await db.query.users.findFirst({
+  where: eq(users.id, userId),
+});
+
+// 查询用户列表
+const userList = await db.query.users.findMany({
+  where: eq(users.isActive, true),
+  limit: 10,
+  offset: 0,
+});
+
+// 创建用户
+const [newUser] = await db.insert(users).values({
+  email: 'user@example.com',
+  username: 'john',
+  password: hashedPassword,
+}).returning();
+
+// 更新用户
+await db.update(users)
+  .set({ isActive: false })
+  .where(eq(users.id, userId));
+
+// 删除用户
+await db.delete(users).where(eq(users.id, userId));
+```
+
+### 关系查询
+
+```typescript
+// 查询用户及其角色
+const user = await db.query.users.findFirst({
+  where: eq(users.id, userId),
+  with: {
+    userRoles: {
+      with: {
+        role: {
+          with: {
+            rolePermissions: {
+              with: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+});
+```
+
 ### 缓存装饰器
 
 ```typescript
@@ -89,13 +147,17 @@ class UserService {
   // 自动缓存 5 分钟
   @Cacheable({ key: 'user', ttl: 300 })
   async getUserById(id: string) {
-    return await prisma.user.findUnique({ where: { id } });
+    return await db.query.users.findFirst({ 
+      where: eq(users.id, id) 
+    });
   }
 
   // 更新后自动清除缓存
   @CacheEvict({ key: 'user' })
   async updateUser(id: string, data: any) {
-    return await prisma.user.update({ where: { id }, data });
+    return await db.update(users)
+      .set(data)
+      .where(eq(users.id, id));
   }
 }
 ```
@@ -106,52 +168,37 @@ class UserService {
 import { SoftDeleteHelper } from '@/shared/utils/softDelete';
 
 // 软删除用户
-await prisma.user.update({
-  where: { id },
-  data: SoftDeleteHelper.softDelete(),
-});
+await db.update(users)
+  .set(SoftDeleteHelper.softDelete())
+  .where(eq(users.id, userId));
 
 // 查询未删除的用户
-const users = await prisma.user.findMany({
-  where: SoftDeleteHelper.notDeleted(),
+const activeUsers = await db.query.users.findMany({
+  where: SoftDeleteHelper.notDeleted(users.deletedAt),
 });
 
 // 恢复用户
-await prisma.user.update({
-  where: { id },
-  data: SoftDeleteHelper.restore(),
-});
-```
-
-### 乐观锁
-
-```typescript
-import { OptimisticLockHelper } from '@/shared/utils/softDelete';
-
-// 使用版本号防止并发冲突
-const result = await prisma.user.updateMany({
-  where: OptimisticLockHelper.createLockCondition(id, currentVersion),
-  data: OptimisticLockHelper.incrementVersion(updateData),
-});
-
-if (result.count === 0) {
-  throw new OptimisticLockException('数据已被其他用户修改');
-}
+await db.update(users)
+  .set(SoftDeleteHelper.restore())
+  .where(eq(users.id, userId));
 ```
 
 ### 分页查询
 
 ```typescript
 import { PaginationHelper } from '@/shared/utils/pagination';
+import { count } from 'drizzle-orm';
 
 // 解析分页参数
 const { skip, take, page, limit } = PaginationHelper.parseParams(req.query);
 
 // 查询数据
-const [items, total] = await Promise.all([
-  prisma.user.findMany({ skip, take }),
-  prisma.user.count(),
-]);
+const items = await db.query.users.findMany({
+  limit: take,
+  offset: skip,
+});
+
+const [{ value: total }] = await db.select({ value: count() }).from(users);
 
 // 创建分页响应
 const response = PaginationHelper.createResponse(items, total, page, limit);
@@ -159,34 +206,89 @@ const response = PaginationHelper.createResponse(items, total, page, limit);
 
 ## 📚 文档
 
-- [快速启动指南](./QUICK_START.md)
-- [路由系统文档](./docs/ROUTING.md)
-- [缓存使用指南](./docs/CACHE_USAGE.md)
-- [软删除和乐观锁使用指南](./docs/SOFT_DELETE_USAGE.md)
-- [API 文档指南](./docs/API_DOCUMENTATION.md)
-- [优化完成报告](./OPTIMIZATION_COMPLETED.md)
+### 核心文档
+- [项目文档首页](./docs/README.md) - 完整的项目文档导航
+- [Router 使用指南](./docs/router-guide.md) - Express 路由系统详解
+- [Drizzle ORM 使用指南](./docs/drizzle-guide.md) - 数据库 ORM 使用指南
+- [中间件使用指南](./docs/middleware-guide.md) - 中间件开发和使用
+- [API 开发指南](./docs/api-development.md) - 完整的 API 开发流程
+- [数据库设计文档](./docs/database-design.md) - 数据库表结构和设计
+- [项目优化记录](./docs/CHANGELOG.md) - 架构优化和变更记录
 
 ## 📂 Directory Structure
 
 ```
 .
-├── deploy
-├── docs
-├── src
-│   ├── api
-│   ├── cache
-│   ├── common
-│   ├── config
-│   ├── database
-│   ├── middleware
-│   ├── utils
-│   ├── index.ts
-│   └── server.ts
-├── test
-├── .env.development
-├── .env.production
+├── drizzle/                    # Drizzle 迁移文件
+├── docs/                       # 项目文档
+├── src/
+│   ├── api/                    # API 路由聚合
+│   ├── core/                   # 核心功能
+│   │   ├── cache/              # 缓存服务
+│   │   ├── config/             # 配置管理
+│   │   ├── database/           # 数据库 (Drizzle)
+│   │   │   ├── schema/         # 数据库 Schema
+│   │   │   ├── client.ts       # 数据库客户端
+│   │   │   ├── migrate.ts      # 迁移脚本
+│   │   │   └── seed.ts         # 种子数据
+│   │   ├── jobs/               # 定时任务
+│   │   ├── logger/             # 日志服务
+│   │   ├── router/             # 路由注册器
+│   │   └── services/           # 核心服务
+│   ├── modules/                # 业务模块
+│   │   ├── auth/               # 认证模块
+│   │   ├── users/              # 用户模块
+│   │   └── monitoring/         # 监控模块
+│   ├── shared/                 # 共享资源
+│   │   ├── decorators/         # 装饰器
+│   │   ├── exceptions/         # 异常类
+│   │   ├── middleware/         # 中间件
+│   │   ├── schemas/            # Zod Schemas
+│   │   ├── types/              # 类型定义
+│   │   └── utils/              # 工具函数
+│   ├── index.ts                # 应用入口
+│   └── server.ts               # 服务器配置
+├── test/                       # 测试文件
+├── .env.development            # 开发环境变量
+├── .env.production             # 生产环境变量
+├── drizzle.config.ts           # Drizzle 配置
 ├── package.json
 └── tsconfig.json
+```
+
+## 🗄️ 数据库管理
+
+### 迁移命令
+
+```bash
+# 生成迁移文件
+pnpm db:generate
+
+# 执行迁移
+pnpm db:push
+
+# 打开 Drizzle Studio
+pnpm db:studio
+
+# 填充种子数据
+pnpm db:seed
+```
+
+### Schema 定义
+
+```typescript
+// src/core/database/schema/users.ts
+import { pgTable, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: varchar('id', { length: 128 }).primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  username: varchar('username', { length: 100 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
 ```
 
 ## 📄 License

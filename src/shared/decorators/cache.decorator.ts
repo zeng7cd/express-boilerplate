@@ -26,7 +26,7 @@ export interface CacheOptions {
  * class UserService {
  *   @Cacheable({ key: 'user', ttl: 300 })
  *   async getUserById(id: string) {
- *     return await prisma.user.findUnique({ where: { id } });
+ *     return await db.query.users.findFirst({ where: eq(users.id, id) });
  *   }
  * }
  * ```
@@ -81,7 +81,7 @@ export function Cacheable(options: CacheOptions) {
  * class UserService {
  *   @CacheEvict({ key: 'user' })
  *   async updateUser(id: string, data: any) {
- *     return await prisma.user.update({ where: { id }, data });
+ *     return await db.update(users).set(data).where(eq(users.id, id));
  *   }
  * }
  * ```

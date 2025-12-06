@@ -1,4 +1,5 @@
 /**
  * 数据库模块入口
  */
-export { prisma, testDatabaseConnection, closeDatabaseConnection, checkDatabaseHealth } from './client';
+export { db, schema, testDatabaseConnection, closeDatabaseConnection, checkDatabaseHealth } from './client';
+export * from './schema';

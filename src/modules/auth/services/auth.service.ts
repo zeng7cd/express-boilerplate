@@ -2,7 +2,8 @@
  * 认证服务
  */
 import bcrypt from 'bcryptjs';
-import { prisma } from '@/core/database';
+import { db, users, roles, userRoles, rolePermissions, permissions, sessions } from '@/core/database';
+import { eq, or, and, gt } from 'drizzle-orm';
 import { jwtService } from './jwt.service';
 import { env } from '@/core/config/env';
 import { tokenBlacklistService } from '@/core/services/token-blacklist.service';
@@ -15,10 +16,8 @@ export class AuthService {
    */
   async register(data: RegisterRequest): Promise<{ id: string; email: string; username: string }> {
     // 检查用户是否已存在
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: data.email }, { username: data.username }],
-      },
+    const existingUser = await db.query.users.findFirst({
+      where: or(eq(users.email, data.email), eq(users.username, data.username)),
     });
 
     if (existingUser) {
@@ -29,32 +28,26 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
 
     // 创建用户
-    const user = await prisma.user.create({
-      data: {
+    const [user] = await db
+      .insert(users)
+      .values({
         email: data.email,
         username: data.username,
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-      },
-    });
+      })
+      .returning({ id: users.id, email: users.email, username: users.username });
 
     // 分配默认角色
-    const defaultRole = await prisma.role.findUnique({
-      where: { name: 'user' },
+    const defaultRole = await db.query.roles.findFirst({
+      where: eq(roles.name, 'user'),
     });
 
     if (defaultRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: user.id,
-          roleId: defaultRole.id,
-        },
+      await db.insert(userRoles).values({
+        userId: user.id,
+        roleId: defaultRole.id,
       });
     }
 
@@ -65,16 +58,16 @@ export class AuthService {
    * 用户登录
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
-    // 查找用户
-    const user = await prisma.user.findUnique({
-      where: { email: data.email },
-      include: {
+    // 查找用户及其角色权限
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, data.email),
+      with: {
         userRoles: {
-          include: {
+          with: {
             role: {
-              include: {
+              with: {
                 rolePermissions: {
-                  include: {
+                  with: {
                     permission: true,
                   },
                 },
@@ -96,18 +89,17 @@ export class AuthService {
     }
 
     // 提取角色和权限
-    const roles = user.userRoles.map((ur: { role: { name: string } }) => ur.role.name);
-    const permissions = user.userRoles.flatMap(
-      (ur: { role: { rolePermissions: { permission: { name: string } }[] } }) =>
-        ur.role.rolePermissions.map((rp) => rp.permission.name),
+    const userRolesList = user.userRoles.map((ur) => ur.role.name);
+    const userPermissions = user.userRoles.flatMap((ur) =>
+      ur.role.rolePermissions.map((rp) => rp.permission.name)
     );
 
     const authenticatedUser: AuthenticatedUser = {
       id: user.id,
       email: user.email,
       username: user.username,
-      roles,
-      permissions,
+      roles: userRolesList,
+      permissions: userPermissions,
     };
 
     // 生成令牌
@@ -115,27 +107,22 @@ export class AuthService {
     const refreshToken = jwtService.generateRefreshToken(user.id);
 
     // 保存会话
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
-      },
+    await db.insert(sessions).values({
+      userId: user.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
     });
 
     // 更新最后登录时间
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
     return {
       user: {
         id: user.id,
         email: user.email,
         username: user.username,
-        roles,
+        roles: userRolesList,
       },
       tokens: {
         accessToken,
@@ -153,17 +140,17 @@ export class AuthService {
     const _decoded = jwtService.verifyRefreshToken(refreshToken);
 
     // 查找会话
-    const session = await prisma.session.findUnique({
-      where: { refreshToken },
-      include: {
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.refreshToken, refreshToken),
+      with: {
         user: {
-          include: {
+          with: {
             userRoles: {
-              include: {
+              with: {
                 role: {
-                  include: {
+                  with: {
                     rolePermissions: {
-                      include: {
+                      with: {
                         permission: true,
                       },
                     },
@@ -181,31 +168,30 @@ export class AuthService {
     }
 
     // 提取角色和权限
-    const roles = session.user.userRoles.map((ur: { role: { name: string } }) => ur.role.name);
-    const permissions = session.user.userRoles.flatMap(
-      (ur: { role: { rolePermissions: { permission: { name: string } }[] } }) =>
-        ur.role.rolePermissions.map((rp) => rp.permission.name),
+    const userRolesList = session.user.userRoles.map((ur) => ur.role.name);
+    const userPermissions = session.user.userRoles.flatMap((ur) =>
+      ur.role.rolePermissions.map((rp) => rp.permission.name)
     );
 
     const authenticatedUser: AuthenticatedUser = {
       id: session.user.id,
       email: session.user.email,
       username: session.user.username,
-      roles,
-      permissions,
+      roles: userRolesList,
+      permissions: userPermissions,
     };
 
     // 生成新的访问令牌
     const newAccessToken = jwtService.generateAccessToken(authenticatedUser);
 
     // 更新会话
-    await prisma.session.update({
-      where: { id: session.id },
-      data: {
+    await db
+      .update(sessions)
+      .set({
         token: newAccessToken,
         expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
-      },
-    });
+      })
+      .where(eq(sessions.id, session.id));
 
     return {
       accessToken: newAccessToken,
@@ -221,9 +207,7 @@ export class AuthService {
     await tokenBlacklistService.addToBlacklist(token);
 
     // 删除会话记录
-    await prisma.session.deleteMany({
-      where: { token },
-    });
+    await db.delete(sessions).where(eq(sessions.token, token));
   }
 
   /**
@@ -235,22 +219,15 @@ export class AuthService {
     await tokenBlacklistService.blacklistUserTokens(userId, maxExpiry);
 
     // 删除所有会话记录
-    await prisma.session.deleteMany({
-      where: { userId },
-    });
+    await db.delete(sessions).where(eq(sessions.userId, userId));
   }
 
   /**
    * 验证会话
    */
   async validateSession(tokenId: string): Promise<boolean> {
-    const session = await prisma.session.findFirst({
-      where: {
-        token: tokenId,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
+    const session = await db.query.sessions.findFirst({
+      where: and(eq(sessions.token, tokenId), gt(sessions.expiresAt, new Date())),
     });
 
     return !!session;

@@ -45,9 +45,9 @@ export class PaginationHelper {
   }
 
   /**
-   * 创建 Prisma 分页查询参数
+   * 创建数据库分页查询参数
    */
-  static toPrismaParams(params: PaginationParams) {
+  static toDbParams(params: PaginationParams) {
     const { skip, take } = this.parseParams(params);
 
     return {
@@ -82,7 +82,7 @@ export class PaginationHelper {
  */
 export class FieldFilterHelper {
   /**
-   * 根据字段列表创建 Prisma select 对象
+   * 根据字段列表创建数据库 select 对象
    */
   static createSelect(fields?: string[]): Record<string, boolean> | undefined {
     if (!fields || fields.length === 0) {

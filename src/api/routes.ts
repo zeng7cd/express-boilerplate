@@ -17,9 +17,8 @@ router.use('/auth', authRoutes);
 
 /**
  * 系统路由（不添加 /api 前缀）
- * 直接在 setupRoutes 中注册
  */
-export const systemRoutes: Record<string, { path: string; router: ExpressRouter; description: string }> = {
+export const systemRoutes = {
   healthCheck: {
     path: '/health-check',
     router: healthCheckRouter,
@@ -30,6 +29,6 @@ export const systemRoutes: Record<string, { path: string; router: ExpressRouter;
     router: swaggerRoutes,
     description: 'API 文档',
   },
-};
+} as const;
 
 export default router;

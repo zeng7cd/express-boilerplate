@@ -3,7 +3,8 @@
  * 定期清理过期数据
  */
 import cron from 'cron';
-import { prisma } from '@/core/database';
+import { db, sessions, auditLogs } from '@/core/database';
+import { lt } from 'drizzle-orm';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
 const logger = getAppPinoLogger();
@@ -13,15 +14,9 @@ const logger = getAppPinoLogger();
  */
 export async function cleanupExpiredSessions(): Promise<void> {
   try {
-    const result = await prisma.session.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
-        },
-      },
-    });
+    await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
 
-    logger.info({ count: result.count }, 'Expired sessions cleaned up');
+    logger.info('Expired sessions cleaned up');
   } catch (error) {
     logger.error({ err: error }, 'Failed to cleanup expired sessions');
   }
@@ -35,15 +30,9 @@ export async function cleanupOldAuditLogs(daysToKeep: number = 90): Promise<void
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-    const result = await prisma.auditLog.deleteMany({
-      where: {
-        createdAt: {
-          lt: cutoffDate,
-        },
-      },
-    });
+    await db.delete(auditLogs).where(lt(auditLogs.createdAt, cutoffDate));
 
-    logger.info({ count: result.count, daysToKeep }, 'Old audit logs cleaned up');
+    logger.info({ daysToKeep }, 'Old audit logs cleaned up');
   } catch (error) {
     logger.error({ err: error }, 'Failed to cleanup old audit logs');
   }

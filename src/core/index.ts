@@ -14,3 +14,6 @@ export * from './database';
 
 // 日志模块
 export * from './logger';
+
+// 路由模块
+export * from './router';
