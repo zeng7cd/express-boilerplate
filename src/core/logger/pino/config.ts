@@ -9,15 +9,20 @@ import { env } from '@/core/config/env';
 /**
  * 获取基础pino配置
  */
-export function getBasePinoConfig(): pino.LoggerOptions {
-  return {
+export function getBasePinoConfig(hasTransport = false): pino.LoggerOptions {
+  const config: pino.LoggerOptions = {
     level: env.LOGGER_LEVEL,
     serializers: {
       err: pino.stdSerializers.err,
       req: pino.stdSerializers.req,
       res: pino.stdSerializers.res,
     },
-    formatters: {
+  };
+
+  // 只有在没有使用 transport 时才添加自定义 formatters
+  // 因为 transport.targets 不允许自定义 level formatters
+  if (!hasTransport) {
+    config.formatters = {
       level: (label: string) => ({
         level: label.toUpperCase(),
       }),
@@ -25,8 +30,10 @@ export function getBasePinoConfig(): pino.LoggerOptions {
         ...object,
         timestamp: new Date().toISOString(),
       }),
-    },
-  };
+    };
+  }
+
+  return config;
 }
 
 /**
@@ -110,8 +117,8 @@ export function getTransportConfig(
  * 创建完整的pino配置
  */
 export function createPinoConfig(name?: string, logFileName?: string): pino.LoggerOptions {
-  const baseConfig = getBasePinoConfig();
   const transport = getTransportConfig(logFileName);
+  const baseConfig = getBasePinoConfig(!!transport);
 
   return {
     ...baseConfig,

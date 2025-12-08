@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
 // 创建不同级别的速率限制器
@@ -14,7 +14,9 @@ export const createStrictRateLimiter = (windowMs: number, max: number, message?:
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-      return req.ip + ':' + (req.headers['user-agent'] || '');
+      // 使用 ipKeyGenerator 正确处理 IPv6 地址
+      const ip = ipKeyGenerator(req);
+      return ip + ':' + (req.headers['user-agent'] || '');
     },
   });
 };
