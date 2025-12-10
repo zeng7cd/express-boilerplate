@@ -4,7 +4,7 @@
  */
 import type { Application } from 'express';
 import { env } from '@/core/config/env';
-import apiRoutes, { systemRoutes } from '@/api/routes';
+import apiRoutes, { systemRoutes } from '@/routes';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
 const logger = getAppPinoLogger();

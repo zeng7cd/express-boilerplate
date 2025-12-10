@@ -12,7 +12,7 @@ import { requestContextMiddleware } from '@/shared/middleware/requestContext.mid
 import { securityHeaders } from '@/shared/middleware/security';
 
 // Import API routes
-import '@/api/routes';
+import '@/routes';
 
 async function createApp(): Promise<Express> {
   await testDatabaseConnection(); // 测试数据库连接

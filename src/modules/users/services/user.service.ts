@@ -4,7 +4,7 @@
 import * as bcrypt from 'bcryptjs';
 import { db, users, roles, userRoles, rolePermissions, permissions } from '@/core/database';
 import { eq, or, and, ilike, desc, count } from 'drizzle-orm';
-import { env } from '../../../core/config/env';
+import { env } from '@/core/config/env';
 import type {
   CreateUserRequest,
   UpdateUserRequest,
@@ -12,7 +12,7 @@ import type {
   UserListQuery,
   UserListResponse,
   ChangePasswordRequest,
-} from '../../../shared/types/user';
+} from '@/shared/types/user';
 
 export class UserService {
   /**
