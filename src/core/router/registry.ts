@@ -3,13 +3,18 @@
  * 负责将装饰器标记的控制器注册到 Express 应用
  */
 import 'reflect-metadata';
-import type { Application, Router } from 'express';
+import type { Application, Router, Request, Response, NextFunction } from 'express';
 import { Router as ExpressRouter } from 'express';
 import type { ControllerMetadata } from './types';
 import { METADATA_KEYS } from './types';
 import { getRegisteredControllers } from './decorators';
 import { getAppPinoLogger } from '@/core/logger/pino';
 import { env } from '@/core/config/env';
+import { VALIDATE_METADATA_KEY } from './decorators/validate.decorator';
+import { RATE_LIMIT_METADATA_KEY } from './decorators/rateLimit.decorator';
+import type { RateLimitOptions } from './decorators/rateLimit.decorator';
+import { validate } from '@/shared/middleware/validation';
+import { createStrictRateLimiter } from '@/shared/middleware/security';
 
 const logger = getAppPinoLogger();
 
@@ -59,14 +64,39 @@ export function registerRoutes(app: Application): RouteRegistrationResult {
         continue;
       }
 
-      // 合并控制器和路由级别的中间件
-      const allMiddlewares = [...metadata.middlewares, ...route.middlewares];
+      // 获取验证中间件
+      const validationSchema = Reflect.getMetadata(VALIDATE_METADATA_KEY, controllerInstance, route.handlerName);
+      const validationMiddlewares = validationSchema ? [validate(validationSchema)] : [];
 
-      // 绑定处理器到控制器实例
-      const boundHandler = handler.bind(controllerInstance);
+      // 获取限流中间件
+      const rateLimitOptions: RateLimitOptions | undefined = Reflect.getMetadata(
+        RATE_LIMIT_METADATA_KEY,
+        controllerInstance,
+        route.handlerName,
+      );
+      const rateLimitMiddlewares = rateLimitOptions
+        ? [createStrictRateLimiter(rateLimitOptions.windowMs, rateLimitOptions.max, rateLimitOptions.message)]
+        : [];
+
+      // 合并所有中间件：限流 -> 验证 -> 控制器中间件 -> 路由中间件
+      const allMiddlewares = [
+        ...rateLimitMiddlewares,
+        ...validationMiddlewares,
+        ...metadata.middlewares,
+        ...route.middlewares,
+      ];
+
+      // 包装处理器以自动捕获异步错误
+      const wrappedHandler = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await handler.call(controllerInstance, req, res, next);
+        } catch (error) {
+          next(error);
+        }
+      };
 
       // 注册路由
-      (router as any)[route.method](route.path, ...allMiddlewares, boundHandler);
+      (router as any)[route.method](route.path, ...allMiddlewares, wrappedHandler);
 
       logger.debug(
         {

@@ -38,6 +38,8 @@ export default [
         },
       ],
       '@typescript-eslint/no-namespace': 'off',
+      // 对于装饰器、Repository 等底层代码，允许使用 any 类型
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 ];

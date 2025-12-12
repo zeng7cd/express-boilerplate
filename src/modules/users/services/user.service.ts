@@ -2,7 +2,7 @@
  * 用户服务
  */
 import * as bcrypt from 'bcryptjs';
-import { db, users, roles, userRoles, rolePermissions, permissions } from '@/core/database';
+import { db, users, roles, userRoles } from '@/core/database';
 import { eq, or, and, ilike, desc, count } from 'drizzle-orm';
 import { env } from '@/core/config/env';
 import type {

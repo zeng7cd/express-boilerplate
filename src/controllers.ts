@@ -7,6 +7,7 @@
 
 // 业务模块控制器
 import './modules/auth/controllers/auth.controller';
+import './modules/users/controllers/user.controller';
 
 // 监控模块控制器
 import './modules/monitoring/healthCheck/healthCheck.controller';

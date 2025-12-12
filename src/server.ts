@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
@@ -10,6 +11,7 @@ import requestLogger from '@/shared/middleware/requestLogger';
 import { requestIdMiddleware } from '@/shared/middleware/requestId.middleware';
 import { requestContextMiddleware } from '@/shared/middleware/requestContext.middleware';
 import { securityHeaders } from '@/shared/middleware/security';
+import { performanceMonitoring } from '@/shared/middleware/performance.middleware';
 
 async function createApp(): Promise<Express> {
   // 导入所有控制器（触发装饰器注册）
@@ -28,11 +30,30 @@ async function createApp(): Promise<Express> {
   // Request context middleware
   app.use(requestContextMiddleware);
 
+  // Performance monitoring
+  app.use(performanceMonitoring);
+
   // Request logging
   app.use(requestLogger);
 
   // Security headers
   app.use(securityHeaders);
+
+  // Compression middleware (before other middlewares)
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // 不压缩已经压缩的内容
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        // 使用默认的压缩过滤器
+        return compression.filter(req, res);
+      },
+      level: 6, // 压缩级别 (0-9)，6 是平衡性能和压缩率的推荐值
+      threshold: 1024, // 只压缩大于 1KB 的响应
+    }),
+  );
 
   // Security & parsing middlewares
   app.use(express.json({ limit: '10mb' }));

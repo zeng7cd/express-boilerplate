@@ -1,4 +1,5 @@
 /**
- * 装饰器导出
+ * 路由装饰器统一导出
  */
-export { Auth, Public } from './auth.decorators';
+export * from './validate.decorator';
+export * from './rateLimit.decorator';

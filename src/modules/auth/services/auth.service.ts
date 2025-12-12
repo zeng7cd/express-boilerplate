@@ -2,11 +2,14 @@
  * 认证服务
  */
 import bcrypt from 'bcryptjs';
-import { db, users, roles, userRoles, rolePermissions, permissions, sessions } from '@/core/database';
-import { eq, or, and, gt } from 'drizzle-orm';
+import { db, roles, userRoles, sessions } from '@/core/database';
+import { eq, and, gt } from 'drizzle-orm';
 import { jwtService } from './jwt.service';
 import { env } from '@/core/config/env';
 import { tokenBlacklistService } from '@/core/services/token-blacklist.service';
+import { eventBus } from '@/core/events';
+import { UserEvents } from '@/core/events/event-types';
+import type { UserRegisteredEvent, UserLoginEvent, UserLogoutEvent } from '@/core/events/event-types';
 import { DuplicateException, InvalidCredentialsException } from '@/shared/exceptions';
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthenticatedUser } from '@/shared/types/auth';
 
@@ -15,10 +18,9 @@ export class AuthService {
    * 用户注册
    */
   async register(data: RegisterRequest): Promise<{ id: string; email: string; username: string }> {
-    // 检查用户是否已存在
-    const existingUser = await db.query.users.findFirst({
-      where: or(eq(users.email, data.email), eq(users.username, data.username)),
-    });
+    // 使用 Repository 检查用户是否已存在
+    const { userRepository } = await import('@/modules/users/repositories/user.repository');
+    const existingUser = await userRepository.findByEmailOrUsername(data.email, data.username);
 
     if (existingUser) {
       throw new DuplicateException('User with this email or username already exists');
@@ -27,17 +29,14 @@ export class AuthService {
     // 加密密码
     const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
 
-    // 创建用户
-    const [user] = await db
-      .insert(users)
-      .values({
-        email: data.email,
-        username: data.username,
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      })
-      .returning({ id: users.id, email: users.email, username: users.username });
+    // 使用 Repository 创建用户
+    const user = await userRepository.createUser({
+      email: data.email,
+      username: data.username,
+      password: hashedPassword,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
 
     // 分配默认角色
     const defaultRole = await db.query.roles.findFirst({
@@ -51,32 +50,24 @@ export class AuthService {
       });
     }
 
-    return user;
+    // 发布用户注册事件
+    eventBus.publish<UserRegisteredEvent>(UserEvents.REGISTERED, {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      timestamp: new Date(),
+    });
+
+    return { id: user.id, email: user.email, username: user.username };
   }
 
   /**
    * 用户登录
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
-    // 查找用户及其角色权限
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, data.email),
-      with: {
-        userRoles: {
-          with: {
-            role: {
-              with: {
-                rolePermissions: {
-                  with: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    // 使用 Repository 查找用户及其角色权限
+    const { userRepository } = await import('@/modules/users/repositories/user.repository');
+    const user = await userRepository.findByEmailWithRolesAndPermissions(data.email);
 
     if (!user || !user.isActive) {
       throw new InvalidCredentialsException('Invalid email or password');
@@ -112,8 +103,15 @@ export class AuthService {
       expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
     });
 
-    // 更新最后登录时间
-    await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+    // 使用 Repository 更新最后登录时间
+    await userRepository.updateLastLogin(user.id);
+
+    // 发布用户登录事件
+    eventBus.publish<UserLoginEvent>(UserEvents.LOGIN, {
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date(),
+    });
 
     return {
       user: {
@@ -201,11 +199,22 @@ export class AuthService {
    * 用户登出
    */
   async logout(token: string): Promise<void> {
+    // 解码 token 获取用户 ID
+    const decoded = jwtService.decodeToken(token);
+
     // 将 token 加入黑名单
     await tokenBlacklistService.addToBlacklist(token);
 
     // 删除会话记录
     await db.delete(sessions).where(eq(sessions.token, token));
+
+    // 发布用户登出事件
+    if (decoded?.sub) {
+      eventBus.publish<UserLogoutEvent>(UserEvents.LOGOUT, {
+        userId: decoded.sub,
+        timestamp: new Date(),
+      });
+    }
   }
 
   /**

@@ -12,8 +12,17 @@ async function startServer() {
 
   const app = await createApp();
 
+  // 初始化事件处理器
+  const { initEventHandlers } = await import('@/core/events/handlers');
+  initEventHandlers();
+  logger.info('Event handlers initialized');
+
   // 启动定时清理任务
   startCleanupJobs();
+
+  // 预热缓存
+  const { cacheWarmupService } = await import('@/core/services/cache-warmup.service');
+  await cacheWarmupService.warmupAll();
 
   const server = app.listen(env.PORT, () => {
     logger.info(`Server (${env.NODE_ENV}) running on http://${env.HOST}:${env.PORT}`);

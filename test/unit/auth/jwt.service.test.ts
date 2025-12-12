@@ -1,7 +1,7 @@
 /**
  * JWT 服务单元测试
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { jwtService } from '@/modules/auth/services/jwt.service';
 import type { AuthenticatedUser } from '@/shared/types/auth';
 

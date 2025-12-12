@@ -31,7 +31,6 @@ describe('TokenBlacklistService', () => {
   describe('addToBlacklist', () => {
     it('should add token to blacklist', async () => {
       const token = jwtService.generateAccessToken(mockUser);
-      const decoded = jwtService.decodeToken(token);
 
       vi.mocked(cacheService.set).mockResolvedValue(true);
 

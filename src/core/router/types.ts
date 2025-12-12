@@ -33,7 +33,7 @@ export interface ControllerMetadata {
 /**
  * 控制器类构造函数
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export interface ControllerConstructor {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): any;

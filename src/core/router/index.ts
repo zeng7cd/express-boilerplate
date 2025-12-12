@@ -5,6 +5,12 @@ export { Controller, Get, Post, Put, Patch, Delete, Options, Head, UseMiddleware
 
 export { Auth, Public } from './decorators/auth.decorators';
 
+export { Validate } from './decorators/validate.decorator';
+
+export { RateLimit } from './decorators/rateLimit.decorator';
+
+export type { RateLimitOptions } from './decorators/rateLimit.decorator';
+
 export { registerRoutes, printRouteConfiguration } from './registry';
 
 export type { HttpMethod, RouteMetadata, ControllerMetadata, ControllerConstructor } from './types';

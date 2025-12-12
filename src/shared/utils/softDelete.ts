@@ -6,7 +6,7 @@ export class SoftDeleteHelper {
   /**
    * 获取未删除记录的查询条件
    */
-  static notDeleted<T extends { deletedAt?: Date | null }>() {
+  static notDeleted() {
     return {
       deletedAt: null,
     };
@@ -15,7 +15,7 @@ export class SoftDeleteHelper {
   /**
    * 获取已删除记录的查询条件
    */
-  static onlyDeleted<T extends { deletedAt?: Date | null }>() {
+  static onlyDeleted() {
     return {
       deletedAt: {
         not: null,

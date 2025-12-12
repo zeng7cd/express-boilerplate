@@ -2,10 +2,11 @@
  * 认证控制器
  */
 import type { Request, Response } from 'express';
-import { Controller, Post, Get, Auth, Public } from '@/core/router';
+import { Controller, Post, Get, Auth, Public, Validate, RateLimit } from '@/core/router';
 import { authService } from '../services/auth.service';
 import { getLogger } from '@/core/logger';
 import type { LoginRequest, RegisterRequest, RefreshTokenRequest } from '@/shared/types/auth';
+import { loginSchema, registerSchema } from '../schemas';
 
 const logger = getLogger();
 
@@ -15,94 +16,86 @@ const logger = getLogger();
 export class AuthController {
   /**
    * 用户注册
+   * 限流: 每小时最多 3 次注册尝试
    */
   @Public()
+  @RateLimit({
+    windowMs: 60 * 60 * 1000, // 1 小时
+    max: 3, // 3 次
+    message: 'Too many registration attempts, please try again later',
+  })
+  @Validate(registerSchema)
   @Post('/register', {
     description: '用户注册',
   })
   async register(req: Request, res: Response): Promise<void> {
-    try {
-      const data: RegisterRequest = req.body;
+    const data: RegisterRequest = req.body;
 
-      const user = await authService.register(data);
+    const user = await authService.register(data);
 
-      logger.info('User registered successfully', { userId: user.id, email: user.email });
+    logger.info('User registered successfully', { userId: user.id, email: user.email });
 
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: user,
-      });
-    } catch (error) {
-      logger.error('Registration failed', error as Error, { email: req.body.email });
-
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Registration failed',
-      });
-    }
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: user,
+    });
   }
 
   /**
    * 用户登录
+   * 限流: 每 15 分钟最多 5 次登录尝试
    */
   @Public()
+  @RateLimit({
+    windowMs: 15 * 60 * 1000, // 15 分钟
+    max: 5, // 5 次
+    message: 'Too many login attempts, please try again later',
+  })
+  @Validate(loginSchema)
   @Post('/login', {
     description: '用户登录',
   })
   async login(req: Request, res: Response): Promise<void> {
-    try {
-      const data: LoginRequest = req.body;
+    const data: LoginRequest = req.body;
 
-      const result = await authService.login(data);
+    const result = await authService.login(data);
 
-      logger.info('User logged in successfully', {
-        userId: result.user.id,
-        email: result.user.email,
-      });
+    logger.info('User logged in successfully', {
+      userId: result.user.id,
+      email: result.user.email,
+    });
 
-      res.json({
-        success: true,
-        message: 'Login successful',
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Login failed', error as Error, { email: req.body.email });
-
-      res.status(401).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Login failed',
-      });
-    }
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: result,
+    });
   }
 
   /**
    * 刷新令牌
    */
   @Public()
+  @RateLimit({
+    windowMs: 15 * 60 * 1000, // 15 分钟
+    max: 10, // 10 次
+    message: 'Too many token refresh attempts',
+  })
   @Post('/refresh', {
     description: '刷新访问令牌',
   })
   async refreshToken(req: Request, res: Response): Promise<void> {
-    try {
-      const { refreshToken }: RefreshTokenRequest = req.body;
+    const { refreshToken }: RefreshTokenRequest = req.body;
 
-      const result = await authService.refreshToken(refreshToken);
+    const result = await authService.refreshToken(refreshToken);
 
-      logger.info('Token refreshed successfully');
+    logger.info('Token refreshed successfully');
 
-      res.json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Token refresh failed', error as Error);
-
-      res.status(401).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Token refresh failed',
-      });
-    }
+    res.json({
+      success: true,
+      data: result,
+    });
   }
 
   /**
@@ -113,27 +106,18 @@ export class AuthController {
     description: '用户登出',
   })
   async logout(req: Request, res: Response): Promise<void> {
-    try {
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
-      if (token) {
-        await authService.logout(token);
-        logger.info('User logged out successfully', { userId: req.user?.sub });
-      }
-
-      res.json({
-        success: true,
-        message: 'Logout successful',
-      });
-    } catch (error) {
-      logger.error('Logout failed', error as Error, { userId: req.user?.sub });
-
-      res.status(500).json({
-        success: false,
-        message: 'Logout failed',
-      });
+    if (token) {
+      await authService.logout(token);
+      logger.info('User logged out successfully', { userId: req.user?.sub });
     }
+
+    res.json({
+      success: true,
+      message: 'Logout successful',
+    });
   }
 
   /**
@@ -144,32 +128,23 @@ export class AuthController {
     description: '获取当前用户信息',
   })
   async me(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
-        return;
-      }
-
-      res.json({
-        success: true,
-        data: {
-          id: req.user.sub,
-          email: req.user.email,
-          username: req.user.username,
-          roles: req.user.roles,
-          permissions: req.user.permissions,
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to get user info', error as Error, { userId: req.user?.sub });
-
-      res.status(500).json({
+    if (!req.user) {
+      res.status(401).json({
         success: false,
-        message: 'Failed to get user information',
+        message: 'Authentication required',
       });
+      return;
     }
+
+    res.json({
+      success: true,
+      data: {
+        id: req.user.sub,
+        email: req.user.email,
+        username: req.user.username,
+        roles: req.user.roles,
+        permissions: req.user.permissions,
+      },
+    });
   }
 }
