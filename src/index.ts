@@ -1,3 +1,4 @@
+import 'reflect-metadata'; // 必须在最前面导入，用于装饰器元数据
 import { env } from '@/core/config/env';
 import { createApp } from '@/server';
 import { getLogger } from '@/core/logger';

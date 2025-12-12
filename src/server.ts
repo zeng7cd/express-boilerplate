@@ -11,10 +11,10 @@ import { requestIdMiddleware } from '@/shared/middleware/requestId.middleware';
 import { requestContextMiddleware } from '@/shared/middleware/requestContext.middleware';
 import { securityHeaders } from '@/shared/middleware/security';
 
-// Import API routes
-import '@/routes';
-
 async function createApp(): Promise<Express> {
+  // 导入所有控制器（触发装饰器注册）
+  await import('@/controllers');
+
   await testDatabaseConnection(); // 测试数据库连接
 
   const app: Express = express();

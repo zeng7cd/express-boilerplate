@@ -13,7 +13,7 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:T7m!
 
 async function runMigration() {
   console.log('🚀 Starting database migration...');
-  
+
   const migrationClient = postgres(connectionString, { max: 1 });
   const db = drizzle(migrationClient);
 

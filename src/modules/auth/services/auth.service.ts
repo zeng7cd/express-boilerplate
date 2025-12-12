@@ -90,9 +90,7 @@ export class AuthService {
 
     // 提取角色和权限
     const userRolesList = user.userRoles.map((ur) => ur.role.name);
-    const userPermissions = user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.name)
-    );
+    const userPermissions = user.userRoles.flatMap((ur) => ur.role.rolePermissions.map((rp) => rp.permission.name));
 
     const authenticatedUser: AuthenticatedUser = {
       id: user.id,
@@ -170,7 +168,7 @@ export class AuthService {
     // 提取角色和权限
     const userRolesList = session.user.userRoles.map((ur) => ur.role.name);
     const userPermissions = session.user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.name)
+      ur.role.rolePermissions.map((rp) => rp.permission.name),
     );
 
     const authenticatedUser: AuthenticatedUser = {

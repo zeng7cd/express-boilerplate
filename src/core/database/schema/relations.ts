@@ -14,12 +14,16 @@ export const userRoles = pgTable(
     id: varchar('id', { length: 128 })
       .primaryKey()
       .$defaultFn(() => createId()),
-    userId: varchar('user_id', { length: 128 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
-    roleId: varchar('role_id', { length: 128 }).notNull().references(() => roles.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: 128 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    roleId: varchar('role_id', { length: 128 })
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
   },
   (table) => ({
     userRoleIdx: uniqueIndex('user_roles_user_role_idx').on(table.userId, table.roleId),
-  })
+  }),
 );
 
 /**
@@ -31,12 +35,16 @@ export const rolePermissions = pgTable(
     id: varchar('id', { length: 128 })
       .primaryKey()
       .$defaultFn(() => createId()),
-    roleId: varchar('role_id', { length: 128 }).notNull().references(() => roles.id, { onDelete: 'cascade' }),
-    permissionId: varchar('permission_id', { length: 128 }).notNull().references(() => permissions.id, { onDelete: 'cascade' }),
+    roleId: varchar('role_id', { length: 128 })
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+    permissionId: varchar('permission_id', { length: 128 })
+      .notNull()
+      .references(() => permissions.id, { onDelete: 'cascade' }),
   },
   (table) => ({
     rolePermissionIdx: uniqueIndex('role_permissions_role_permission_idx').on(table.roleId, table.permissionId),
-  })
+  }),
 );
 
 /**
@@ -48,7 +56,9 @@ export const sessions = pgTable(
     id: varchar('id', { length: 128 })
       .primaryKey()
       .$defaultFn(() => createId()),
-    userId: varchar('user_id', { length: 128 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: 128 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     token: varchar('token', { length: 500 }).notNull().unique(),
     refreshToken: varchar('refresh_token', { length: 500 }).notNull().unique(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -60,7 +70,7 @@ export const sessions = pgTable(
     refreshTokenIdx: index('sessions_refresh_token_idx').on(table.refreshToken),
     expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt),
     userExpiresIdx: index('sessions_user_expires_idx').on(table.userId, table.expiresAt),
-  })
+  }),
 );
 
 /**
@@ -87,8 +97,12 @@ export const auditLogs = pgTable(
     resourceIdx: index('audit_logs_resource_idx').on(table.resource),
     createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),
     userCreatedIdx: index('audit_logs_user_created_idx').on(table.userId, table.createdAt),
-    resourceActionCreatedIdx: index('audit_logs_resource_action_created_idx').on(table.resource, table.action, table.createdAt),
-  })
+    resourceActionCreatedIdx: index('audit_logs_resource_action_created_idx').on(
+      table.resource,
+      table.action,
+      table.createdAt,
+    ),
+  }),
 );
 
 // 定义关系

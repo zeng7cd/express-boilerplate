@@ -21,7 +21,7 @@ export const roles = pgTable(
   },
   (table) => ({
     deletedAtIdx: index('roles_deleted_at_idx').on(table.deletedAt),
-  })
+  }),
 );
 
 export type Role = typeof roles.$inferSelect;

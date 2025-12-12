@@ -1,50 +1,26 @@
 /**
  * 路由配置和注册
- * 统一管理所有路由的注册和配置
+ * 使用装饰器系统统一管理所有路由的注册和配置
  */
 import type { Application } from 'express';
 import { env } from '@/core/config/env';
-import apiRoutes, { systemRoutes } from '@/routes';
-import { getAppPinoLogger } from '@/core/logger/pino';
-
-const logger = getAppPinoLogger();
+import { registerRoutes, printRouteConfiguration } from '@/core/router/registry';
 
 export const API_PREFIX = `/${env.API_PREFIX}`;
 
 /**
  * 设置应用路由
+ * 使用装饰器系统自动注册所有控制器
  */
 export default function setupRoutes(app: Application): void {
-  // 注册系统路由（不带 API 前缀）
-  Object.entries(systemRoutes).forEach(([name, { path, router, description }]) => {
-    app.use(path, router);
-    logger.debug({ name, path, description }, 'System route registered');
-  });
+  // 导入所有控制器（触发装饰器注册）
+  import('@/controllers');
 
-  // 注册业务 API 路由（带 API 前缀）
-  app.use(API_PREFIX, apiRoutes);
-  logger.debug({ prefix: API_PREFIX }, 'API routes registered');
+  // 注册所有装饰器标记的路由
+  const result = registerRoutes(app);
 
   // 打印路由配置
-  printRouteConfiguration();
-}
-
-/**
- * 打印路由配置信息
- */
-function printRouteConfiguration(): void {
-  console.log('\n📋 Route Configuration:');
-  console.log('='.repeat(60));
-
-  console.log('\n🔧 System Routes:');
-  Object.entries(systemRoutes).forEach(([, { path, description }]) => {
-    console.log(`  ${path.padEnd(30)} - ${description}`);
-  });
-
-  console.log(`\n🌐 API Routes (prefix: ${API_PREFIX}):`);
-  console.log(`  ${API_PREFIX}/auth              - 认证相关接口`);
-
-  console.log(`\n${'='.repeat(60)}\n`);
+  printRouteConfiguration(result);
 }
 
 /**

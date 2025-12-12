@@ -70,35 +70,33 @@ async function seed() {
 
     // 分配权限给角色
     console.log('Assigning permissions to roles...');
-    
+
     // 管理员拥有所有权限
     await db.insert(rolePermissions).values(
       permissionsList.map((permission) => ({
         roleId: adminRole.id,
         permissionId: permission.id,
-      }))
+      })),
     );
 
     // 普通用户权限
-    const userPermissions = permissionsList.filter((p) =>
-      ['users:read', 'posts:read', 'posts:write'].includes(p.name)
-    );
+    const userPermissions = permissionsList.filter((p) => ['users:read', 'posts:read', 'posts:write'].includes(p.name));
     await db.insert(rolePermissions).values(
       userPermissions.map((permission) => ({
         roleId: userRole.id,
         permissionId: permission.id,
-      }))
+      })),
     );
 
     // 版主权限
     const moderatorPermissions = permissionsList.filter((p) =>
-      ['users:read', 'posts:read', 'posts:write', 'posts:delete'].includes(p.name)
+      ['users:read', 'posts:read', 'posts:write', 'posts:delete'].includes(p.name),
     );
     await db.insert(rolePermissions).values(
       moderatorPermissions.map((permission) => ({
         roleId: moderatorRole.id,
         permissionId: permission.id,
-      }))
+      })),
     );
 
     console.log('✅ Permissions assigned to roles');

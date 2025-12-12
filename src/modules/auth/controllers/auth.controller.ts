@@ -2,16 +2,24 @@
  * 认证控制器
  */
 import type { Request, Response } from 'express';
+import { Controller, Post, Get, Auth, Public } from '@/core/router';
 import { authService } from '../services/auth.service';
 import { getLogger } from '@/core/logger';
 import type { LoginRequest, RegisterRequest, RefreshTokenRequest } from '@/shared/types/auth';
 
 const logger = getLogger();
 
+@Controller('/auth', {
+  description: '认证相关接口',
+})
 export class AuthController {
   /**
    * 用户注册
    */
+  @Public()
+  @Post('/register', {
+    description: '用户注册',
+  })
   async register(req: Request, res: Response): Promise<void> {
     try {
       const data: RegisterRequest = req.body;
@@ -38,6 +46,10 @@ export class AuthController {
   /**
    * 用户登录
    */
+  @Public()
+  @Post('/login', {
+    description: '用户登录',
+  })
   async login(req: Request, res: Response): Promise<void> {
     try {
       const data: LoginRequest = req.body;
@@ -67,6 +79,10 @@ export class AuthController {
   /**
    * 刷新令牌
    */
+  @Public()
+  @Post('/refresh', {
+    description: '刷新访问令牌',
+  })
   async refreshToken(req: Request, res: Response): Promise<void> {
     try {
       const { refreshToken }: RefreshTokenRequest = req.body;
@@ -92,6 +108,10 @@ export class AuthController {
   /**
    * 用户登出
    */
+  @Auth()
+  @Post('/logout', {
+    description: '用户登出',
+  })
   async logout(req: Request, res: Response): Promise<void> {
     try {
       const authHeader = req.headers.authorization;
@@ -119,6 +139,10 @@ export class AuthController {
   /**
    * 获取当前用户信息
    */
+  @Auth()
+  @Get('/me', {
+    description: '获取当前用户信息',
+  })
   async me(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -149,6 +173,3 @@ export class AuthController {
     }
   }
 }
-
-// 导出单例实例
-export const authController = new AuthController();

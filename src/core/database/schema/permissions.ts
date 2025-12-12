@@ -18,7 +18,7 @@ export const permissions = pgTable(
   },
   (table) => ({
     resourceActionIdx: uniqueIndex('permissions_resource_action_idx').on(table.resource, table.action),
-  })
+  }),
 );
 
 export type Permission = typeof permissions.$inferSelect;

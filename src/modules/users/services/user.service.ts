@@ -82,8 +82,8 @@ export class UserService {
           ilike(users.email, `%${query.search}%`),
           ilike(users.username, `%${query.search}%`),
           ilike(users.firstName, `%${query.search}%`),
-          ilike(users.lastName, `%${query.search}%`)
-        )
+          ilike(users.lastName, `%${query.search}%`),
+        ),
       );
     }
 
@@ -117,10 +117,7 @@ export class UserService {
     });
 
     // 获取总数
-    const [{ value: total }] = await db
-      .select({ value: count() })
-      .from(users)
-      .where(whereClause);
+    const [{ value: total }] = await db.select({ value: count() }).from(users).where(whereClause);
 
     return {
       users: usersList.map((user) => this.formatUserResponse(user)),
@@ -236,7 +233,7 @@ export class UserService {
         roleIds.map((roleId) => ({
           userId,
           roleId,
-        }))
+        })),
       );
     }
   }

@@ -29,7 +29,7 @@ export const users = pgTable(
     usernameIdx: index('users_username_idx').on(table.username),
     isActiveIdx: index('users_is_active_idx').on(table.isActive),
     deletedAtIdx: index('users_deleted_at_idx').on(table.deletedAt),
-  })
+  }),
 );
 
 export type User = typeof users.$inferSelect;
