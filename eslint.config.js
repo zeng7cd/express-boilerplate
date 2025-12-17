@@ -58,15 +58,7 @@ export default [
       'import/order': [
         'error',
         {
-          groups: [
-            'builtin',
-            'external',
-            'internal',
-            ['parent', 'sibling'],
-            'index',
-            'object',
-            'type',
-          ],
+          groups: ['builtin', 'external', 'internal', ['parent', 'sibling'], 'index', 'object', 'type'],
           'newlines-between': 'always',
           alphabetize: {
             order: 'asc',
@@ -158,7 +150,13 @@ export default [
   },
   // 脚本文件和入口文件的特殊规则
   {
-    files: ['scripts/**/*.ts', 'src/index.ts', 'src/core/database/migrate.ts', 'src/core/database/seed.ts', 'src/core/config/env.ts'],
+    files: [
+      'scripts/**/*.ts',
+      'src/index.ts',
+      'src/core/database/migrate.ts',
+      'src/core/database/seed.ts',
+      'src/core/config/env.ts',
+    ],
     rules: {
       'n/no-process-exit': 'off', // 脚本文件中允许使用 process.exit()
     },

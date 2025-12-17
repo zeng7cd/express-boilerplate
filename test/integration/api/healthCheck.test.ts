@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { beforeAll, describe, expect, it, type TaskContext } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../src/server';
 

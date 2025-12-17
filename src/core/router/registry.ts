@@ -154,5 +154,3 @@ function mountRouter(app: Application, ControllerClass: any, router: Router, res
     result.apiRoutes.push(routeInfo);
   }
 }
-
-
