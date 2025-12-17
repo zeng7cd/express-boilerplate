@@ -6,11 +6,9 @@ import { createId } from '@paralleldrive/cuid2';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
 import { RoleWithPermissionsDtoMapper } from '../dtos/role.dto';
-import { roleRepository } from '../repositories/role.repository';
+import type { RoleRepository } from '../repositories/role.repository';
 
 import type { RoleWithPermissionsDto } from '../dtos/role.dto';
-
-const logger = getAppPinoLogger();
 
 export interface CreateRoleRequest {
   name: string;
@@ -34,19 +32,22 @@ export interface RoleListQuery {
 }
 
 export class RoleService {
+  private readonly logger = getAppPinoLogger();
+
+  constructor(private readonly roleRepository: RoleRepository) {}
   /**
    * 创建角色
    */
   async createRole(data: CreateRoleRequest): Promise<RoleWithPermissionsDto> {
     // 检查角色名称是否已存在
-    const existingRole = await roleRepository.findByName(data.name);
+    const existingRole = await this.roleRepository.findByName(data.name);
     if (existingRole) {
       throw new Error('Role with this name already exists');
     }
 
     // 创建角色
     const roleId = createId();
-    const role = await roleRepository.createRole({
+    const role = await this.roleRepository.createRole({
       id: roleId,
       name: data.name,
       displayName: data.displayName,
@@ -56,13 +57,13 @@ export class RoleService {
 
     // 分配权限
     if (data.permissionIds && data.permissionIds.length > 0) {
-      await roleRepository.assignPermissions(role.id, data.permissionIds);
+      await this.roleRepository.assignPermissions(role.id, data.permissionIds);
     }
 
-    logger.info({ roleId: role.id, name: role.name }, 'Role created');
+    this.logger.info({ roleId: role.id, name: role.name }, 'Role created');
 
     // 重新查询角色以获取完整信息
-    const createdRole = await roleRepository.findWithPermissions(role.id);
+    const createdRole = await this.roleRepository.findWithPermissions(role.id);
     if (!createdRole) {
       throw new Error('Failed to retrieve created role');
     }
@@ -87,9 +88,9 @@ export class RoleService {
     let rolesList;
 
     if (query.search) {
-      rolesList = await roleRepository.search(query.search);
+      rolesList = await this.roleRepository.search(query.search);
     } else {
-      rolesList = await roleRepository.findAllWithPermissions({
+      rolesList = await this.roleRepository.findAllWithPermissions({
         includeInactive: query.includeInactive,
       });
     }
@@ -114,7 +115,7 @@ export class RoleService {
    * 根据ID获取角色
    */
   async getRoleById(id: string): Promise<RoleWithPermissionsDto | null> {
-    const role = await roleRepository.findWithPermissions(id);
+    const role = await this.roleRepository.findWithPermissions(id);
     return role ? RoleWithPermissionsDtoMapper.fromEntityWithPermissions(role) : null;
   }
 
@@ -122,7 +123,7 @@ export class RoleService {
    * 更新角色
    */
   async updateRole(id: string, data: UpdateRoleRequest): Promise<RoleWithPermissionsDto> {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
@@ -141,18 +142,18 @@ export class RoleService {
         updateData.isActive = data.isActive;
       }
 
-      await roleRepository.update(id, updateData);
+      await this.roleRepository.update(id, updateData);
     }
 
     // 更新权限
     if (data.permissionIds !== undefined) {
-      await roleRepository.assignPermissions(id, data.permissionIds);
+      await this.roleRepository.assignPermissions(id, data.permissionIds);
     }
 
-    logger.info({ roleId: id }, 'Role updated');
+    this.logger.info({ roleId: id }, 'Role updated');
 
     // 重新查询角色以获取完整信息
-    const updatedRole = await roleRepository.findWithPermissions(id);
+    const updatedRole = await this.roleRepository.findWithPermissions(id);
     if (!updatedRole) {
       throw new Error('Failed to retrieve updated role');
     }
@@ -163,28 +164,28 @@ export class RoleService {
    * 删除角色（软删除）
    */
   async deleteRole(id: string): Promise<void> {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
 
-    await roleRepository.softDelete(id);
-    logger.info({ roleId: id }, 'Role deleted');
+    await this.roleRepository.softDelete(id);
+    this.logger.info({ roleId: id }, 'Role deleted');
   }
 
   /**
    * 激活角色
    */
   async activateRole(id: string): Promise<RoleWithPermissionsDto> {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
 
-    await roleRepository.activate(id);
-    logger.info({ roleId: id }, 'Role activated');
+    await this.roleRepository.activate(id);
+    this.logger.info({ roleId: id }, 'Role activated');
 
-    const activatedRole = await roleRepository.findWithPermissions(id);
+    const activatedRole = await this.roleRepository.findWithPermissions(id);
     if (!activatedRole) {
       throw new Error('Failed to retrieve activated role');
     }
@@ -195,15 +196,15 @@ export class RoleService {
    * 停用角色
    */
   async deactivateRole(id: string): Promise<RoleWithPermissionsDto> {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
 
-    await roleRepository.deactivate(id);
-    logger.info({ roleId: id }, 'Role deactivated');
+    await this.roleRepository.deactivate(id);
+    this.logger.info({ roleId: id }, 'Role deactivated');
 
-    const deactivatedRole = await roleRepository.findWithPermissions(id);
+    const deactivatedRole = await this.roleRepository.findWithPermissions(id);
     if (!deactivatedRole) {
       throw new Error('Failed to retrieve deactivated role');
     }
@@ -214,27 +215,42 @@ export class RoleService {
    * 获取角色的权限列表
    */
   async getRolePermissions(id: string) {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
 
-    return roleRepository.getPermissions(id);
+    return this.roleRepository.getPermissions(id);
   }
 
   /**
    * 分配权限给角色
    */
   async assignPermissions(id: string, permissionIds: string[]): Promise<void> {
-    const role = await roleRepository.findById(id);
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new Error('Role not found');
     }
 
-    await roleRepository.assignPermissions(id, permissionIds);
-    logger.info({ roleId: id, permissionCount: permissionIds.length }, 'Permissions assigned to role');
+    await this.roleRepository.assignPermissions(id, permissionIds);
+    this.logger.info({ roleId: id, permissionCount: permissionIds.length }, 'Permissions assigned to role');
   }
 }
 
-// 导出单例实例
-export const roleService = new RoleService();
+// 延迟初始化单例，避免循环依赖
+let roleServiceInstance: RoleService | null = null;
+
+export const getRoleService = (): RoleService => {
+  if (!roleServiceInstance) {
+    const { roleRepository } = require('../repositories/role.repository');
+    roleServiceInstance = new RoleService(roleRepository);
+  }
+  return roleServiceInstance;
+};
+
+// 向后兼容的导出
+export const roleService = new Proxy({} as RoleService, {
+  get(_target, prop) {
+    return getRoleService()[prop as keyof RoleService];
+  },
+});

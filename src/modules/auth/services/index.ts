@@ -1,5 +1,5 @@
 /**
  * 认证服务模块统一导出
  */
-export { authService } from './auth.service';
-export { jwtService } from './jwt.service';
+export { authService, getAuthService, AuthService } from './auth.service';
+export { jwtService, JWTService } from './jwt.service';

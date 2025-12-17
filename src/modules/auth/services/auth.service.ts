@@ -7,20 +7,25 @@ import { eq, and, gt } from 'drizzle-orm';
 import { env } from '@/core/config/env';
 import { db, roles, userRoles, sessions } from '@/core/database';
 import { eventBus } from '@/core/events';
-import { tokenBlacklistService } from '@/core/services/token-blacklist.service';
 import { DuplicateException, InvalidCredentialsException } from '@/shared/exceptions';
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthenticatedUser } from '@/shared/types/auth';
 
-import { jwtService } from './jwt.service';
+import type { UserRepository } from '@/modules/users/repositories/user.repository';
+import type { JWTService } from './jwt.service';
+import type { TokenBlacklistService } from '@/core/services/token-blacklist.service';
 
 export class AuthService {
+  constructor(
+    private readonly jwtService: JWTService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
+    private readonly userRepository: UserRepository,
+  ) {}
   /**
    * 用户注册
    */
   async register(data: RegisterRequest): Promise<{ id: string; email: string; username: string }> {
     // 使用 Repository 检查用户是否已存在
-    const { userRepository } = await import('@/modules/users/repositories/user.repository');
-    const existingUser = await userRepository.findByEmailOrUsername(data.email, data.username);
+    const existingUser = await this.userRepository.findByEmailOrUsername(data.email, data.username);
 
     if (existingUser) {
       throw new DuplicateException('User with this email or username already exists');
@@ -30,7 +35,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
 
     // 使用 Repository 创建用户
-    const user = await userRepository.createUser({
+    const user = await this.userRepository.createUser({
       email: data.email,
       username: data.username,
       password: hashedPassword,
@@ -66,8 +71,7 @@ export class AuthService {
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
     // 使用 Repository 查找用户及其角色权限
-    const { userRepository } = await import('@/modules/users/repositories/user.repository');
-    const user = await userRepository.findByEmailWithRolesAndPermissions(data.email);
+    const user = await this.userRepository.findByEmailWithRolesAndPermissions(data.email);
 
     if (!user || !user.isActive) {
       throw new InvalidCredentialsException('Invalid email or password');
@@ -92,19 +96,19 @@ export class AuthService {
     };
 
     // 生成令牌
-    const accessToken = jwtService.generateAccessToken(authenticatedUser);
-    const refreshToken = jwtService.generateRefreshToken(user.id);
+    const accessToken = this.jwtService.generateAccessToken(authenticatedUser);
+    const refreshToken = this.jwtService.generateRefreshToken(user.id);
 
     // 保存会话
     await db.insert(sessions).values({
       userId: user.id,
       token: accessToken,
       refreshToken,
-      expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
+      expiresAt: new Date(Date.now() + this.jwtService.getExpiresInSeconds() * 1000),
     });
 
     // 使用 Repository 更新最后登录时间
-    await userRepository.updateLastLogin(user.id);
+    await this.userRepository.updateLastLogin(user.id);
 
     // 发布用户登录事件
     eventBus.publish('user.login', {
@@ -123,7 +127,7 @@ export class AuthService {
       tokens: {
         accessToken,
         refreshToken,
-        expiresIn: jwtService.getExpiresInSeconds(),
+        expiresIn: this.jwtService.getExpiresInSeconds(),
       },
     };
   }
@@ -133,7 +137,7 @@ export class AuthService {
    */
   async refreshToken(refreshToken: string): Promise<{ accessToken: string; expiresIn: number }> {
     // 验证刷新令牌
-    const _decoded = jwtService.verifyRefreshToken(refreshToken);
+    const _decoded = this.jwtService.verifyRefreshToken(refreshToken);
 
     // 查找会话
     const session = await db.query.sessions.findFirst({
@@ -178,20 +182,20 @@ export class AuthService {
     };
 
     // 生成新的访问令牌
-    const newAccessToken = jwtService.generateAccessToken(authenticatedUser);
+    const newAccessToken = this.jwtService.generateAccessToken(authenticatedUser);
 
     // 更新会话
     await db
       .update(sessions)
       .set({
         token: newAccessToken,
-        expiresAt: new Date(Date.now() + jwtService.getExpiresInSeconds() * 1000),
+        expiresAt: new Date(Date.now() + this.jwtService.getExpiresInSeconds() * 1000),
       })
       .where(eq(sessions.id, session.id));
 
     return {
       accessToken: newAccessToken,
-      expiresIn: jwtService.getExpiresInSeconds(),
+      expiresIn: this.jwtService.getExpiresInSeconds(),
     };
   }
 
@@ -200,10 +204,10 @@ export class AuthService {
    */
   async logout(token: string): Promise<void> {
     // 解码 token 获取用户 ID
-    const decoded = jwtService.decodeToken(token);
+    const decoded = this.jwtService.decodeToken(token);
 
     // 将 token 加入黑名单
-    await tokenBlacklistService.addToBlacklist(token);
+    await this.tokenBlacklistService.addToBlacklist(token);
 
     // 删除会话记录
     await db.delete(sessions).where(eq(sessions.token, token));
@@ -222,8 +226,8 @@ export class AuthService {
    */
   async logoutAllDevices(userId: string): Promise<void> {
     // 将用户的所有 token 加入黑名单
-    const maxExpiry = jwtService.getRefreshExpiresInSeconds();
-    await tokenBlacklistService.blacklistUserTokens(userId, maxExpiry);
+    const maxExpiry = this.jwtService.getRefreshExpiresInSeconds();
+    await this.tokenBlacklistService.blacklistUserTokens(userId, maxExpiry);
 
     // 删除所有会话记录
     await db.delete(sessions).where(eq(sessions.userId, userId));
@@ -241,5 +245,23 @@ export class AuthService {
   }
 }
 
-// 导出单例实例
-export const authService = new AuthService();
+// 延迟初始化单例，避免循环依赖
+let authServiceInstance: AuthService | null = null;
+
+export const getAuthService = (): AuthService => {
+  if (!authServiceInstance) {
+    const { jwtService } = require('./jwt.service');
+    const { tokenBlacklistService } = require('@/core/services/token-blacklist.service');
+    const { userRepository } = require('@/modules/users/repositories/user.repository');
+
+    authServiceInstance = new AuthService(jwtService, tokenBlacklistService, userRepository);
+  }
+  return authServiceInstance;
+};
+
+// 向后兼容的导出
+export const authService = new Proxy({} as AuthService, {
+  get(_target, prop) {
+    return getAuthService()[prop as keyof AuthService];
+  },
+});

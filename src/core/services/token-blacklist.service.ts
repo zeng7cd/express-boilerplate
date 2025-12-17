@@ -2,20 +2,25 @@
  * Token 黑名单服务
  * 用于撤销已发放的 JWT Token
  */
-import { cacheService } from '@/core/cache';
+import type { CacheService } from '@/core/cache';
 import { getAppPinoLogger } from '@/core/logger/pino';
-import { jwtService } from '@/modules/auth/services/jwt.service';
+import type { JWTService } from '@/modules/auth/services/jwt.service';
 
 export class TokenBlacklistService {
   private readonly logger = getAppPinoLogger();
   private readonly prefix = 'blacklist:';
+
+  constructor(
+    private readonly cacheService: CacheService,
+    private readonly jwtService: JWTService,
+  ) {}
 
   /**
    * 将 token 加入黑名单
    */
   async addToBlacklist(token: string, expiresIn?: number): Promise<void> {
     try {
-      const decoded = jwtService.decodeToken(token);
+      const decoded = this.jwtService.decodeToken(token);
       if (!decoded?.jti) {
         this.logger.warn('Token does not have jti claim');
         throw new Error('Token does not have jti claim');
@@ -25,7 +30,7 @@ export class TokenBlacklistService {
       const ttl = expiresIn || this.calculateTTL(decoded.exp);
 
       if (ttl > 0) {
-        await cacheService.set(`${this.prefix}${decoded.jti}`, true, ttl);
+        await this.cacheService.set(`${this.prefix}${decoded.jti}`, true, ttl);
         this.logger.info({ jti: decoded.jti }, 'Token added to blacklist');
       }
     } catch (error) {
@@ -39,12 +44,12 @@ export class TokenBlacklistService {
    */
   async isBlacklisted(token: string): Promise<boolean> {
     try {
-      const decoded = jwtService.decodeToken(token);
+      const decoded = this.jwtService.decodeToken(token);
       if (!decoded?.jti) {
         return false;
       }
 
-      const result = await cacheService.get<boolean>(`${this.prefix}${decoded.jti}`);
+      const result = await this.cacheService.get<boolean>(`${this.prefix}${decoded.jti}`);
       return result === true;
     } catch (error) {
       this.logger.error({ err: error }, 'Failed to check token blacklist');
@@ -58,7 +63,7 @@ export class TokenBlacklistService {
   async blacklistUserTokens(userId: string, expiresIn: number): Promise<void> {
     try {
       // 使用用户 ID 作为标记，撤销该用户的所有 token
-      await cacheService.set(`${this.prefix}user:${userId}`, true, expiresIn);
+      await this.cacheService.set(`${this.prefix}user:${userId}`, true, expiresIn);
       this.logger.info({ userId }, 'All user tokens blacklisted');
     } catch (error) {
       this.logger.error({ err: error, userId }, 'Failed to blacklist user tokens');
@@ -71,7 +76,7 @@ export class TokenBlacklistService {
    */
   async isUserBlacklisted(userId: string): Promise<boolean> {
     try {
-      const result = await cacheService.get<boolean>(`${this.prefix}user:${userId}`);
+      const result = await this.cacheService.get<boolean>(`${this.prefix}user:${userId}`);
       return result === true;
     } catch (error) {
       this.logger.error({ err: error, userId }, 'Failed to check user blacklist');
@@ -89,5 +94,21 @@ export class TokenBlacklistService {
   }
 }
 
-// 导出单例
-export const tokenBlacklistService = new TokenBlacklistService();
+// 延迟初始化单例，避免循环依赖
+let tokenBlacklistServiceInstance: TokenBlacklistService | null = null;
+
+export const getTokenBlacklistService = (): TokenBlacklistService => {
+  if (!tokenBlacklistServiceInstance) {
+    const { cacheService } = require('@/core/cache');
+    const { jwtService } = require('@/modules/auth/services/jwt.service');
+    tokenBlacklistServiceInstance = new TokenBlacklistService(cacheService, jwtService);
+  }
+  return tokenBlacklistServiceInstance;
+};
+
+// 向后兼容的导出
+export const tokenBlacklistService = new Proxy({} as TokenBlacklistService, {
+  get(_target, prop) {
+    return getTokenBlacklistService()[prop as keyof TokenBlacklistService];
+  },
+});

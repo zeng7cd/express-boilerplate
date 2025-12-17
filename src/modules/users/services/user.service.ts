@@ -7,7 +7,7 @@ import { eq, or, and, ilike, desc, count } from 'drizzle-orm';
 
 import { env } from '@/core/config/env';
 import { db, users, roles, userRoles } from '@/core/database';
-import { userRepository } from '@/modules/users/repositories/user.repository';
+import type { UserRepository } from '@/modules/users/repositories/user.repository';
 import type {
   CreateUserRequest,
   UpdateUserRequest,
@@ -18,12 +18,13 @@ import type {
 } from '@/shared/types/user';
 
 export class UserService {
+  constructor(private readonly userRepository: UserRepository) {}
   /**
    * 创建用户
    */
   async createUser(data: CreateUserRequest): Promise<UserResponse> {
     // 检查用户是否已存在
-    const existingUser = await userRepository.findByEmailOrUsername(data.email, data.username);
+    const existingUser = await this.userRepository.findByEmailOrUsername(data.email, data.username);
 
     if (existingUser) {
       throw new Error('User with this email or username already exists');
@@ -275,5 +276,20 @@ export class UserService {
   }
 }
 
-// 导出单例实例
-export const userService = new UserService();
+// 延迟初始化单例，避免循环依赖
+let userServiceInstance: UserService | null = null;
+
+export const getUserService = (): UserService => {
+  if (!userServiceInstance) {
+    const { userRepository } = require('@/modules/users/repositories/user.repository');
+    userServiceInstance = new UserService(userRepository);
+  }
+  return userServiceInstance;
+};
+
+// 向后兼容的导出
+export const userService = new Proxy({} as UserService, {
+  get(_target, prop) {
+    return getUserService()[prop as keyof UserService];
+  },
+});

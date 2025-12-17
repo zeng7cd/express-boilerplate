@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import { env } from '@/core/config/env';
 import { getAppPinoLogger } from '@/core/logger/pino';
 
-class CacheService {
+export class CacheService {
   private redis: Redis;
   private logger = getAppPinoLogger();
 
